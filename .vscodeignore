@@ -1,0 +1,16 @@
+.vscode/**
+out/**
+src/**
+preview-src/**
+node_modules/**
+.gitignore
+.github
+tsconfig.json
+tslint.json
+yarn.lock
+*.vsix
+media/*.map
+.readme/**
+documentation/**
+.vscode-test/**
+webpack.config.js
