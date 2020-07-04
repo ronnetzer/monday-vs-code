@@ -1,0 +1,8 @@
+VSCode API - https://code.visualstudio.com/api/references/vscode-api
+Hello World Extension - https://github.com/microsoft/vscode-extension-samples/blob/master/helloworld-sample/src/extension.ts
+REGEX To Detect Entered TODO/# - https://github.com/microsoft/vscode-pull-request-github/search?q=ISSUE_OR_URL_EXPRESSION&unscoped_q=ISSUE_OR_URL_EXPRESSION
+Issue Provider (Handles detection of issue creation) - https://github.com/microsoft/vscode-pull-request-github/blob/fc8164abc17f72ebe61ba78c724782577973460d/src/issues/issueTodoProvider.ts
+Hover and AsYouType Registration - https://github.com/microsoft/vscode-pull-request-github/blob/eca2ede45c0e272514dcb1ca519e3b784b6aeac2/src/issues/issueFeatureRegistrar.ts#L183-L185
+
+GlobalState for Token Management - https://code.visualstudio.com/api/extension-capabilities/common-capabilities#data-storage
+
