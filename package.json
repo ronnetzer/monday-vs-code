@@ -1159,12 +1159,11 @@
     "vscode:prepublish": "webpack --env.production",
     "postinstall": "cd src/typings && npx vscode-dts master && npx vscode-dts dev master",
     "compile": "tsc -p ./",
-    "clean": "rm -r out/ media/ preview-src/dist/",
+    "clean": "rm -r out/ media/",
     "watch": "webpack --watch --env.development",
     "test": "yarn run preprocess && node ./out/test/runTests.js",
     "preprocess": "yarn run compile && yarn run preprocess-gql && yarn run preprocess-svg",
-    "preprocess-gql": "node scripts/preprocess-gql --in src/github/queries.gql --out out/github/queries.gql",
-    "preprocess-svg": "node scripts/preprocess-svg --in resources/ --out preview-src/dist/resources"
+    "preprocess-gql": "node scripts/preprocess-gql --in src/github/queries.gql --out out/github/queries.gql"
   },
   "devDependencies": {
     "@types/chai": "^4.1.4",

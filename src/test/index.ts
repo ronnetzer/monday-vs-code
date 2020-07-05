@@ -45,7 +45,6 @@ async function runAllExtensionTests(testsRoot: string): Promise<number> {
 	mocha.addFile(path.resolve(testsRoot, 'globalHooks.js'));
 
 	await addTests(mocha, testsRoot);
-	await addTests(mocha, path.resolve(testsRoot, '../../preview-src/dist/preview-src/test'));
 
 	if (process.env.TEST_JUNIT_XML_PATH) {
 		mocha.reporter('mocha-multi-reporters', {
