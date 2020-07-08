@@ -1,7 +1,9 @@
 import * as http from 'http';
-import * as querystring from 'querystring';
 import * as PersistentState from '../common/persistentState';
 import * as vscode from 'vscode';
+import * as fetch from 'node-fetch';
+import mondaySdk from 'monday-sdk-js';
+import { parse } from 'url';
 import Logger from '../common/logger';
 
 // access_token	An access token that can be used to make calls to the monday.com API. It is valid for 30 days.
@@ -22,13 +24,15 @@ const CLIENT_ID = 'ed8c61ed38205f088d7a499d63a52f56';
 const REDIRECT_URI = 'http://localhost:3000/oauth/callback';
 const SCOPES = ['me:read', 'boards:read', 'boards:write', 'notifications:write', 'teams:read'];
 const OAUTH_URI = `https://auth.monday.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=${SCOPES.join('%20')}`;
-// const TOKEN_URI = 'https://auth.monday.com/oauth2/token';
+const CLIENT_SECRET = 'c354ecd321c6eda34392fd30de4205e6';
+const TOKEN_URI = 'https://auth.monday.com/oauth2/token';
 
 // https://auth.monday.com/oauth2/authorize?client_id=ed8c61ed38205f088d7a499d63a52f56&redirect_uri=http://localhost:3000/oauth/callback&scope=me:read%20boards:read%20boards:write%20notifications:write%20teams:read
 
 export class MondayKit {
 
 	private _redirectUriInstance: http.Server | undefined;
+	private _sdkInstance: any;
 	// private _token: string;
 
 	constructor(token: string) {
@@ -43,18 +47,26 @@ export class MondayKit {
 		} else {
 			// this._token = token;
 			PersistentState.store('monday', 'token', token);
+			this._sdkInstance = mondaySdk({ token });
 		}
 	}
 
 	private login() {
-
 		//create a server object
 		this._redirectUriInstance = http.createServer((req, res) => {
 			res.writeHead(200, { 'Content-Type': 'text/html' }); // http header
 			const { url, method } = req;
 			if (method === 'GET' && url?.includes('/oauth/callback')) {
-				const params = querystring.parse(url);
-				res.end('Success');
+				const params = parse(url, true).query;
+
+				// TODO: create a proper auth success page?
+				res.end(`
+					Successful Authentication! </br>
+					Go back to your IDE and start creating items from your VSC :D
+				`);
+
+				this.acquireToken(params.code as string);
+
 				this.shutdownRedirectServer();
 			}
 		}).listen(3000, () => {
@@ -67,6 +79,23 @@ export class MondayKit {
 		}, 60000);
 	}
 
+	private acquireToken(code: string) {
+		const body = {
+			code,
+			client_id: CLIENT_ID,
+			redirect_uri: REDIRECT_URI,
+			client_secret: CLIENT_SECRET
+		};
+
+		console.log(body);
+
+		fetch(TOKEN_URI, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, })
+			.then(res => res.json())
+			.then((accessInfo: { access_token: string, token_type: 'Bearer', scope: string, expires_in: string, refresh_token: string }) => {
+				this.handleAcquiredToken(accessInfo.access_token, accessInfo.refresh_token, accessInfo.expires_in);
+			});
+	}
+
 	private shutdownRedirectServer() {
 		this._redirectUriInstance?.close();
 		this._redirectUriInstance = undefined;
@@ -74,7 +103,8 @@ export class MondayKit {
 	}
 
 	private isExpired(token: string) {
-		return true;
+		// TODO: implement expired token validation.
+		return false;
 	}
 
 	private refreshToken() {
@@ -85,6 +115,20 @@ export class MondayKit {
 		}
 
 		// TODO: start refresh flow.
+	}
+
+	private handleAcquiredToken(accessToken: string, refreshToken?: string, expiresIn?: string) {
+		PersistentState.store('monday', 'access_token', accessToken);
+
+		if (refreshToken) {
+			PersistentState.store('monday', 'refresh_token', refreshToken);
+		}
+
+		if (expiresIn) {
+			PersistentState.store('monday', 'expires_in', expiresIn);
+		}
+
+		this._sdkInstance = mondaySdk({ token: accessToken });
 	}
 
 }

@@ -139,7 +139,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<ApiImp
 	const mondayCredentialStore = new MondayCredentialStore(telemetry);
 	await credentialStore.initialize();
 
-
 	const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports;
 	const gitAPI = gitExtension.getAPI(1);
 
