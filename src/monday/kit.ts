@@ -2,7 +2,7 @@ import * as http from 'http';
 import * as PersistentState from '../common/persistentState';
 import * as vscode from 'vscode';
 import * as fetch from 'node-fetch';
-import mondaySdk from 'monday-sdk-js';
+import * as mondaySdk from 'monday-sdk-js';
 import { parse } from 'url';
 import Logger from '../common/logger';
 
@@ -32,14 +32,18 @@ const TOKEN_URI = 'https://auth.monday.com/oauth2/token';
 export class MondayKit {
 
 	private _redirectUriInstance: http.Server | undefined;
-	private _sdkInstance: any;
-	// private _token: string;
+	private _sdkInstance: mondaySdk.MondaySDK;
 
-	constructor(token: string) {
+	constructor() {
 		// TODO: check if token expired, if it is get from the PersistantState the refresh token and try to refresh,
 		// if failed as well. return null instead of the instance or logout.
 
-		if (!token) {
+		this._sdkInstance = mondaySdk();
+		const expiresIn = PersistentState.fetch('monday', 'expires_in');
+		const refreshToken = PersistentState.fetch('monday', 'refresh_token');
+		const accessToken = PersistentState.fetch('monday', 'access_token');
+
+		if (!token && !accessToken) {
 			this.login();
 		} else if (this.isExpired(token)) {
 			// check if token expired and handle refresh
@@ -47,7 +51,7 @@ export class MondayKit {
 		} else {
 			// this._token = token;
 			PersistentState.store('monday', 'token', token);
-			this._sdkInstance = mondaySdk({ token });
+			this._sdkInstance.setToken(token);
 		}
 	}
 
@@ -87,8 +91,6 @@ export class MondayKit {
 			client_secret: CLIENT_SECRET
 		};
 
-		console.log(body);
-
 		fetch(TOKEN_URI, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, })
 			.then(res => res.json())
 			.then((accessInfo: { access_token: string, token_type: 'Bearer', scope: string, expires_in: string, refresh_token: string }) => {
@@ -102,7 +104,7 @@ export class MondayKit {
 		Logger.appendLine('Redirect uri server instance shutdown', 'monday kit');
 	}
 
-	private isExpired(token: string) {
+	private isExpired(refreshToken: string) {
 		// TODO: implement expired token validation.
 		return false;
 	}
@@ -118,17 +120,22 @@ export class MondayKit {
 	}
 
 	private handleAcquiredToken(accessToken: string, refreshToken?: string, expiresIn?: string) {
-		PersistentState.store('monday', 'access_token', accessToken);
+		try {
+			this._sdkInstance.setToken(accessToken);
 
-		if (refreshToken) {
-			PersistentState.store('monday', 'refresh_token', refreshToken);
+			PersistentState.store('monday', 'access_token', accessToken);
+
+			if (refreshToken) {
+				PersistentState.store('monday', 'refresh_token', refreshToken);
+			}
+
+			if (expiresIn) {
+				PersistentState.store('monday', 'expires_in', expiresIn);
+			}
+		} catch (error) {
+			console.error(error);
 		}
 
-		if (expiresIn) {
-			PersistentState.store('monday', 'expires_in', expiresIn);
-		}
-
-		this._sdkInstance = mondaySdk({ token: accessToken });
 	}
 
 }

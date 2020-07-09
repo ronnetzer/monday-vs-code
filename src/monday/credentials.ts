@@ -19,7 +19,6 @@ const PROMPT_FOR_SIGN_IN_STORAGE_KEY = 'login';
 // TODO: figure out how to implement the ProvidersAPI https://github.com/microsoft/vscode/issues/88309
 // const AUTH_PROVIDER_ID = 'monday';
 
-
 export interface Monday {
 	mondayKit: MondayKit;
 	graphql: ApolloClient<NormalizedCacheObject>;
