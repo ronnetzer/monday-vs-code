@@ -33,8 +33,9 @@ export class MondayKit {
 
 	private _redirectUriInstance: http.Server | undefined;
 	private _sdkInstance: mondaySdk.MondaySDK;
+	// private _token: string;
 
-	constructor() {
+	constructor(token: string) {
 		// TODO: check if token expired, if it is get from the PersistantState the refresh token and try to refresh,
 		// if failed as well. return null instead of the instance or logout.
 
