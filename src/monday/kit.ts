@@ -15,8 +15,10 @@ export interface MondaySession {
 	access_token: string;
 	token_type: string;
 	scope: string;
-	expires_in: number;
+	expires_in: string;
 	refresh_token: string;
+	access_token_expiration_date: number;
+	refresh_token_expiration_date: number;
 }
 
 // TODO: remove those from code into CI.
@@ -31,34 +33,51 @@ const TOKEN_URI = 'https://auth.monday.com/oauth2/token';
 
 export class MondayKit {
 
-	private _redirectUriInstance: http.Server | undefined;
-	private _sdkInstance: mondaySdk.MondaySDK;
-	// private _token: string;
+	#redirectUriInstance: http.Server | undefined;
+	#sdkInstance: mondaySdk.MondaySDK;
 
-	constructor(token: string) {
-		// TODO: check if token expired, if it is get from the PersistantState the refresh token and try to refresh,
-		// if failed as well. return null instead of the instance or logout.
+	constructor() {
+		// if no access_token or refresh_token is expired. login in from scratch.
+		// is_expired_access_token ? is_expired_refresh_token ? login :
+		// refresh_token -> update session.
 
-		this._sdkInstance = mondaySdk();
-		const expiresIn = PersistentState.fetch('monday', 'expires_in');
-		const refreshToken = PersistentState.fetch('monday', 'refresh_token');
-		const accessToken = PersistentState.fetch('monday', 'access_token');
+		this.#sdkInstance = mondaySdk();
+		const session = PersistentState.fetch('monday', 'session') as MondaySession;
 
-		if (!token) {
+		if (!session.access_token || this.isExpired(session.refresh_token_expiration_date)) {
+			this.setSession(undefined);
 			this.login();
-		} else if (this.isExpired(token)) {
-			// check if token expired and handle refresh
-			this.refreshToken();
+		} else if (this.isExpired(session.access_token_expiration_date)) {
+			this.refreshToken(session.refresh_token);
 		} else {
-			// this._token = token;
-			PersistentState.store('monday', 'token', token);
-			this._sdkInstance.setToken(token);
+			this.setSession(session);
 		}
 	}
 
+	get sdk() {
+		return this.#sdkInstance;
+	}
+
+	public setSession(session?: MondaySession) {
+		if (session) {
+			this.#sdkInstance.setToken(session.access_token);
+			vscode.window.showInformationMessage('Monday VS Code Extension - Logged In! :D');
+		}
+
+		PersistentState.store('monday', 'session', session);
+	}
+
+	public getSession() {
+		return PersistentState.fetch('monday', 'session') as MondaySession | {};
+	}
+
 	private login() {
+		const timeout = setTimeout(() => {
+			this.shutdownRedirectServer();
+		}, 60000);
+
 		//create a server object
-		this._redirectUriInstance = http.createServer((req, res) => {
+		this.#redirectUriInstance = http.createServer((req, res) => {
 			res.writeHead(200, { 'Content-Type': 'text/html' }); // http header
 			const { url, method } = req;
 			if (method === 'GET' && url?.includes('/oauth/callback')) {
@@ -71,17 +90,12 @@ export class MondayKit {
 				`);
 
 				this.acquireToken(params.code as string);
-
-				this.shutdownRedirectServer();
+				this.shutdownRedirectServer(timeout);
 			}
 		}).listen(3000, () => {
 			Logger.appendLine('Redirect uri server instance up and waiting', 'monday kit');
 			vscode.env.openExternal(vscode.Uri.parse(OAUTH_URI));
 		});
-
-		setTimeout(() => {
-			this.shutdownRedirectServer();
-		}, 60000);
 	}
 
 	private acquireToken(code: string) {
@@ -94,45 +108,57 @@ export class MondayKit {
 
 		fetch(TOKEN_URI, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, })
 			.then(res => res.json())
-			.then((accessInfo: { access_token: string, token_type: 'Bearer', scope: string, expires_in: string, refresh_token: string }) => {
-				this.handleAcquiredToken(accessInfo.access_token, accessInfo.refresh_token, accessInfo.expires_in);
+			.then((accessInfo: MondaySession) => {
+				this.handleAcquiredToken(accessInfo);
 			});
 	}
 
-	private shutdownRedirectServer() {
-		this._redirectUriInstance?.close();
-		this._redirectUriInstance = undefined;
+	private shutdownRedirectServer(timeout?: any) {
+		if (timeout) {
+			clearTimeout(timeout);
+		}
+
+		this.#redirectUriInstance?.close();
+		this.#redirectUriInstance = undefined;
 		Logger.appendLine('Redirect uri server instance shutdown', 'monday kit');
 	}
 
-	private isExpired(refreshToken: string) {
-		// TODO: implement expired token validation.
-		return false;
+	private isExpired(expirationDate: number) {
+		return Date.now() <= expirationDate;
 	}
 
-	private refreshToken() {
-		const refreshToken = PersistentState.fetch('monday', 'refresh_token');
+	private refreshToken(refreshToken: string) {
+		const body = {
+			refresh_token: refreshToken,
+			client_id: CLIENT_ID,
+			client_secret: CLIENT_SECRET
+		};
 
-		if (!refreshToken) {
-			// TODO: reinitiate login
-		}
-
-		// TODO: start refresh flow.
+		fetch(TOKEN_URI, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, })
+			.then(res => res.json())
+			.then((accessInfo: MondaySession) => {
+				this.handleAcquiredToken(accessInfo);
+			});
 	}
 
-	private handleAcquiredToken(accessToken: string, refreshToken?: string, expiresIn?: string) {
+	private handleAcquiredToken(session: MondaySession) {
 		try {
-			this._sdkInstance.setToken(accessToken);
+			// if we got refresh token meaning this is inital login and we need
+			// to calculate expiration dates both for access_token and refresh_token
 
-			PersistentState.store('monday', 'access_token', accessToken);
+			this.#sdkInstance.setToken(session.access_token);
+			const currSession = this.getSession();
+			let newSessionState = { ...currSession, ...session };
 
-			if (refreshToken) {
-				PersistentState.store('monday', 'refresh_token', refreshToken);
+			if (session.refresh_token) {
+				let now = new Date();
+				const access_token_expiration_date = now.setDate(now.getDate() + 30);
+				now = new Date();
+				const refresh_token_expiration_date = now.setDate(now.getDate() + 90);
+				newSessionState = { ...newSessionState, access_token_expiration_date, refresh_token_expiration_date };
 			}
 
-			if (expiresIn) {
-				PersistentState.store('monday', 'expires_in', expiresIn);
-			}
+			this.setSession(newSessionState);
 		} catch (error) {
 			console.error(error);
 		}

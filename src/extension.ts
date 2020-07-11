@@ -42,14 +42,14 @@ async function init(context: vscode.ExtensionContext, mondayCredentialStore: Mon
 	context.subscriptions.push(Logger);
 	Logger.appendLine('Git repository found, initializing review manager and pr tree view.');
 
-	vscode.authentication.onDidChangeSessions(async e => {
-		if (e.changed['github']) {
-			await prManager.clearCredentialCache();
-			if (reviewManager) {
-				reviewManager.updateState();
-			}
-		}
-	});
+	// vscode.authentication.onDidChangeSessions(async e => {
+	// 	if (e.changed['github']) {
+	// 		await prManager.clearCredentialCache();
+	// 		if (reviewManager) {
+	// 			reviewManager.updateState();
+	// 		}
+	// 	}
+	// });
 
 	context.subscriptions.push(vscode.window.registerUriHandler(uriHandler));
 	context.subscriptions.push(new FileTypeDecorationProvider());
@@ -137,7 +137,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<ApiImp
 	await credentialStore.initialize();
 
 	const mondayCredentialStore = new MondayCredentialStore(telemetry);
-	await credentialStore.initialize();
+	await mondayCredentialStore.initialize();
 
 	const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports;
 	const gitAPI = gitExtension.getAPI(1);
