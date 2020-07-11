@@ -44,7 +44,7 @@ export class MondayKit {
 		const refreshToken = PersistentState.fetch('monday', 'refresh_token');
 		const accessToken = PersistentState.fetch('monday', 'access_token');
 
-		if (!token && !accessToken) {
+		if (!token) {
 			this.login();
 		} else if (this.isExpired(token)) {
 			// check if token expired and handle refresh
