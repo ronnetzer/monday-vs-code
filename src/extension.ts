@@ -22,6 +22,9 @@ import { PullRequestsTreeDataProvider } from './view/prsTreeDataProvider';
 import { ReviewManager } from './view/reviewManager';
 import { IssueFeatureRegistrar } from './issues/issueFeatureRegistrar';
 import { CredentialStore } from './github/credentials';
+
+import { CredentialStore as MondayCredentialStore } from './monday/credentials';
+
 import { GitExtension, GitAPI } from './typings/git';
 import { GitHubContactServiceProvider } from './gitProviders/GitHubContactServiceProvider';
 import { LiveShare } from 'vsls/vscode.js';
@@ -35,7 +38,7 @@ fetch.Promise = PolyfillPromise;
 
 let telemetry: TelemetryReporter;
 
-async function init(context: vscode.ExtensionContext, git: ApiImpl, gitAPI: GitAPI, credentialStore: CredentialStore, repository: Repository, tree: PullRequestsTreeDataProvider, liveshareApiPromise: Promise<LiveShare | undefined>): Promise<void> {
+async function init(context: vscode.ExtensionContext, mondayCredentialStore: MondayCredentialStore, git: ApiImpl, gitAPI: GitAPI, credentialStore: CredentialStore, repository: Repository, tree: PullRequestsTreeDataProvider, liveshareApiPromise: Promise<LiveShare | undefined>): Promise<void> {
 	context.subscriptions.push(Logger);
 	Logger.appendLine('Git repository found, initializing review manager and pr tree view.');
 
@@ -53,7 +56,7 @@ async function init(context: vscode.ExtensionContext, git: ApiImpl, gitAPI: GitA
 	});
 	const reviewManager = new ReviewManager(context, repository, prManager, tree, telemetry);
 	await tree.initialize(prManager);
-	registerCommands(context, prManager, reviewManager, telemetry, credentialStore);
+	registerCommands(context, prManager, reviewManager, telemetry, mondayCredentialStore);
 
 	git.onDidChangeState(() => {
 		reviewManager.updateState();
@@ -120,8 +123,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<ApiImp
 	context.subscriptions.push(telemetry);
 
 	PersistentState.init(context);
+	// TODO: remove!
 	const credentialStore = new CredentialStore(telemetry);
 	await credentialStore.initialize();
+
+	const mondayCredentialStore = new MondayCredentialStore(telemetry);
+	await mondayCredentialStore.initialize();
 
 	const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports;
 	const gitAPI = gitExtension.getAPI(1);
@@ -142,9 +149,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<ApiImp
 	// so fall back to the first repository if no selected repository is found.
 	const selectedRepository = apiImpl.repositories.find(repository => repository.ui.selected) || apiImpl.repositories[0];
 	if (selectedRepository) {
-		await init(context, apiImpl, gitAPI, credentialStore, selectedRepository, prTree, liveshareApiPromise);
+		await init(context, mondayCredentialStore, apiImpl, gitAPI, credentialStore, selectedRepository, prTree, liveshareApiPromise);
 	} else {
-		onceEvent(apiImpl.onDidOpenRepository)(r => init(context, apiImpl, gitAPI, credentialStore, r, prTree, liveshareApiPromise));
+		onceEvent(apiImpl.onDidOpenRepository)(r => init(context, mondayCredentialStore, apiImpl, gitAPI, credentialStore, r, prTree, liveshareApiPromise));
 	}
 
 	return apiImpl;

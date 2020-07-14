@@ -12,15 +12,20 @@ export class MockExtensionContext implements ExtensionContext {
 	subscriptions: { dispose(): any; }[] = [];
 
 	storagePath: string;
+	storageUri: Uri;
 	globalStoragePath: string;
+	globalStorageUri: Uri;
 	logPath: string;
+	logUri: Uri;
 	extensionUri: Uri;
 	environmentVariableCollection: any;
 	extensionMode: any;
 
 	constructor() {
 		this.storagePath = temp.mkdirSync('storage-path');
+		this.storageUri = Uri.parse(this.storagePath);
 		this.globalStoragePath = temp.mkdirSync('global-storage-path');
+		this.globalStorageUri = Uri.parse(this.globalStoragePath);
 		this.logPath = temp.mkdirSync('log-path');
 	}
 
