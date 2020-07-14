@@ -39,15 +39,6 @@ async function init(context: vscode.ExtensionContext, git: ApiImpl, gitAPI: GitA
 	context.subscriptions.push(Logger);
 	Logger.appendLine('Git repository found, initializing review manager and pr tree view.');
 
-	vscode.authentication.onDidChangeSessions(async e => {
-		if (e['github']) {
-			await prManager.clearCredentialCache();
-			if (reviewManager) {
-				reviewManager.updateState();
-			}
-		}
-	});
-
 	context.subscriptions.push(vscode.window.registerUriHandler(uriHandler));
 	context.subscriptions.push(new FileTypeDecorationProvider());
 
