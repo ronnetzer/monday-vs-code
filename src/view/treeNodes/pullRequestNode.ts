@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as uuid from 'uuid';
+// import * as uuid from 'uuid';
 import { parseDiff, getModifiedContentFromDiffHunk, DiffChangeType } from '../../common/diffHunk';
 import { getZeroBased, getAbsolutePosition, getPositionInDiff, mapHeadLineToDiffHunkPosition } from '../../common/diffPositionMapping';
 import { SlimFileChange, GitChangeType } from '../../common/file';
@@ -22,7 +22,7 @@ import { GHPRComment, GHPRCommentThread, TemporaryComment } from '../../github/p
 import { PullRequestManager } from '../../github/pullRequestManager';
 import { PullRequestModel } from '../../github/pullRequestModel';
 import { createVSCodeCommentThread, parseGraphQLReaction, updateCommentThreadLabel, updateCommentReviewState, updateCommentReactions, CommentReactionHandler } from '../../github/utils';
-import { CommentHandler, registerCommentHandler, unregisterCommentHandler } from '../../commentHandlerResolver';
+// import { CommentHandler, registerCommentHandler, unregisterCommentHandler } from '../../commentHandlerResolver';
 import { ReactionGroup } from '../../github/graphql';
 import { getCommentingRanges } from '../../common/commentingRanges';
 import { DirectoryTreeNode } from './directoryTreeNode';
@@ -79,7 +79,7 @@ export function getDocumentThreadDatas(
 	return threads;
 }
 
-export class PRNode extends TreeNode implements CommentHandler, vscode.CommentingRangeProvider, CommentReactionHandler {
+export class PRNode extends TreeNode implements /*CommentHandler*/ vscode.CommentingRangeProvider, CommentReactionHandler {
 	static ID = 'PRNode';
 
 	private _fileChanges: (RemoteFileChangeNode | InMemFileChangeNode)[] | undefined;
@@ -97,7 +97,7 @@ export class PRNode extends TreeNode implements CommentHandler, vscode.Commentin
 
 	private _command: vscode.Command;
 
-	private _commentHandlerId: string;
+	// private _commentHandlerId: string;
 
 	public get command(): vscode.Command {
 		return this._command;
@@ -114,8 +114,8 @@ export class PRNode extends TreeNode implements CommentHandler, vscode.Commentin
 		private _isLocal: boolean
 	) {
 		super();
-		this._commentHandlerId = uuid();
-		registerCommentHandler(this._commentHandlerId, this);
+		// this._commentHandlerId = uuid();
+		// registerCommentHandler(this._commentHandlerId, this);
 	}
 
 	// #region Tree
@@ -1039,7 +1039,7 @@ export class PRNode extends TreeNode implements CommentHandler, vscode.Commentin
 	dispose(): void {
 		super.dispose();
 
-		unregisterCommentHandler(this._commentHandlerId);
+		// unregisterCommentHandler(this._commentHandlerId);
 
 		if (this._inMemPRContentProvider) {
 			this._inMemPRContentProvider.dispose();

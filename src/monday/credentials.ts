@@ -19,6 +19,7 @@ export class CredentialStore {
 
 	public async initialize(): Promise<void> {
 		this._mondayAPI = new MondayKit();
+		return this._mondayAPI.init();
 	}
 
 	public async reset() {
@@ -78,6 +79,7 @@ export class CredentialStore {
 		while (retry) {
 			try {
 				monday = new MondayKit();
+				await monday.init();
 			} catch (e) {
 				Logger.appendLine(`Error signing in to Monday: ${e}`);
 				if (e instanceof Error && e.stack) {
@@ -85,14 +87,14 @@ export class CredentialStore {
 				}
 			}
 
-			if (monday) {
+			if (monday?.sdk) {
 				retry = false;
 			} else {
 				retry = (await vscode.window.showErrorMessage(`Error signing in to Monday`, TRY_AGAIN, CANCEL)) === TRY_AGAIN;
 			}
 		}
 
-		if (monday) {
+		if (monday?.sdk) {
 			this._mondayAPI = monday;
 
 			/* __GDPR__

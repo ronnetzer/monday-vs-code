@@ -36,19 +36,21 @@ export class MondayKit {
 	#redirectUriInstance: http.Server | undefined;
 	#sdkInstance: mondaySdk.MondaySDK;
 
-	constructor() {
+	constructor() { }
+
+	async init() {
 		// if no access_token or refresh_token is expired. login in from scratch.
 		// is_expired_access_token ? is_expired_refresh_token ? login :
 		// refresh_token -> update session.
-
 		this.#sdkInstance = mondaySdk();
 		const session = PersistentState.fetch('monday', 'session') as MondaySession;
 
 		if (!session.access_token || this.isExpired(session.refresh_token_expiration_date)) {
 			this.setSession(undefined);
-			this.login();
+			await this.login();
 		} else if (this.isExpired(session.access_token_expiration_date)) {
-			this.refreshToken(session.refresh_token);
+			const accessInfo = await this.refreshToken(session.refresh_token);
+			this.handleAcquiredToken(accessInfo);
 		} else {
 			this.setSession(session);
 		}
@@ -71,34 +73,40 @@ export class MondayKit {
 		return PersistentState.fetch('monday', 'session') as MondaySession | {};
 	}
 
-	private login() {
-		const timeout = setTimeout(() => {
-			this.shutdownRedirectServer();
-		}, 60000);
+	private async login() {
+		return new Promise((resolve, reject) => {
 
-		//create a server object
-		this.#redirectUriInstance = http.createServer((req, res) => {
-			res.writeHead(200, { 'Content-Type': 'text/html' }); // http header
-			const { url, method } = req;
-			if (method === 'GET' && url?.includes('/oauth/callback')) {
-				const params = parse(url, true).query;
+			const timeout = setTimeout(() => {
+				this.shutdownRedirectServer();
+				reject('Failed to login after 60 sec');
+			}, 60000);
 
-				// TODO: create a proper auth success page?
-				res.end(`
-					Successful Authentication! </br>
-					Go back to your IDE and start creating items from your VSC :D
-				`);
+			//create a server object
+			this.#redirectUriInstance = http.createServer(async (req, res) => {
+				res.writeHead(200, { 'Content-Type': 'text/html' }); // http header
+				const { url, method } = req;
+				if (method === 'GET' && url?.includes('/oauth/callback')) {
+					const params = parse(url, true).query;
 
-				this.acquireToken(params.code as string);
-				this.shutdownRedirectServer(timeout);
-			}
-		}).listen(3000, () => {
-			Logger.appendLine('Redirect uri server instance up and waiting', 'monday kit');
-			vscode.env.openExternal(vscode.Uri.parse(OAUTH_URI));
+					// TODO: create a proper auth success page?
+					res.end(`
+						Successful Authentication! </br>
+						Go back to your IDE and start creating items from your VSC :D
+					`);
+
+					const accessInfo = await this.acquireToken(params.code as string);
+					this.handleAcquiredToken(accessInfo);
+					resolve();
+					this.shutdownRedirectServer(timeout);
+				}
+			}).listen(3000, () => {
+				Logger.appendLine('Redirect uri server instance up and waiting', 'monday kit');
+				vscode.env.openExternal(vscode.Uri.parse(OAUTH_URI));
+			});
 		});
 	}
 
-	private acquireToken(code: string) {
+	private async acquireToken(code: string) {
 		const body = {
 			code,
 			client_id: CLIENT_ID,
@@ -106,11 +114,8 @@ export class MondayKit {
 			client_secret: CLIENT_SECRET
 		};
 
-		fetch(TOKEN_URI, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, })
-			.then(res => res.json())
-			.then((accessInfo: MondaySession) => {
-				this.handleAcquiredToken(accessInfo);
-			});
+		return fetch(TOKEN_URI, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, })
+			.then(res => res.json() as Promise<MondaySession>);
 	}
 
 	private shutdownRedirectServer(timeout?: any) {
@@ -127,18 +132,15 @@ export class MondayKit {
 		return Date.now() <= expirationDate;
 	}
 
-	private refreshToken(refreshToken: string) {
+	private async refreshToken(refreshToken: string): Promise<MondaySession> {
 		const body = {
 			refresh_token: refreshToken,
 			client_id: CLIENT_ID,
 			client_secret: CLIENT_SECRET
 		};
 
-		fetch(TOKEN_URI, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, })
-			.then(res => res.json())
-			.then((accessInfo: MondaySession) => {
-				this.handleAcquiredToken(accessInfo);
-			});
+		return fetch(TOKEN_URI, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, })
+			.then(res => res.json() as Promise<MondaySession>);
 	}
 
 	private handleAcquiredToken(session: MondaySession) {
