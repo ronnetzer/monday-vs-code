@@ -31,6 +31,7 @@ import { EXTENSION_ID } from './constants';
 import { CredentialStore as MondayCredentialStore } from './monday/credentials';
 import { MondayKit } from './monday/kit';
 import { BoardsManager } from './monday/boardsManager';
+import { UsersManager } from './monday/usersManager';
 
 const aiKey: string = '5f5c7e72-c998-4afe-ac9b-4bf9b25ace98';
 
@@ -44,13 +45,15 @@ let mondayKit: MondayKit;
 
 async function init(context: vscode.ExtensionContext, mondayCredentialStore: MondayCredentialStore, boardsManager: BoardsManager): Promise<void> {
 	context.subscriptions.push(Logger);
-	Logger.appendLine('Monday board found, initializing items manager.');
+	Logger.appendLine('Monday board found, initializing items manager & users manager');
 
 	context.subscriptions.push(vscode.window.registerUriHandler(uriHandler));
 	context.subscriptions.push(new FileTypeDecorationProvider());
 
-	// TODO: instantiate ItemsManager(...) @ron.netzer
+	const usersManager = new UsersManager(telemetry, mondayKit.sdk);
+	await usersManager.init();
 
+	// TODO: instantiate ItemsManager(...) @ron.netzer
 	// const prManager = new PullRequestManager(repository, telemetry, git, credentialStore);
 	// context.subscriptions.push(prManager);
 

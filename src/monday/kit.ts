@@ -29,7 +29,7 @@ export interface MondaySession {
 // TODO: remove those from code into CI.
 const CLIENT_ID = 'ed8c61ed38205f088d7a499d63a52f56';
 const REDIRECT_URI = 'http://localhost:3000/oauth/callback';
-const SCOPES = ['me:read', 'boards:read', 'boards:write', 'notifications:write', 'teams:read'];
+const SCOPES = ['me:read', 'boards:read', 'boards:write', 'notifications:write', 'teams:read', 'users:read'];
 const OAUTH_URI = `https://auth.monday.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=${SCOPES.join('%20')}`;
 const CLIENT_SECRET = 'c354ecd321c6eda34392fd30de4205e6';
 const TOKEN_URI = 'https://auth.monday.com/oauth2/token';
