@@ -8,11 +8,12 @@ import * as vscode from 'vscode';
 import { PullRequest } from './github/interface';
 import { ITelemetry } from './common/telemetry';
 import { CredentialStore } from './monday/credentials';
+import { BoardsManager } from './monday/boardsManager';
 
 const _onDidUpdatePR = new vscode.EventEmitter<PullRequest | void>();
 export const onDidUpdatePR: vscode.Event<PullRequest | void> = _onDidUpdatePR.event;
 
-export function registerCommands(context: vscode.ExtensionContext, telemetry: ITelemetry, credentialStore: CredentialStore) {
+export function registerCommands(context: vscode.ExtensionContext, telemetry: ITelemetry, credentialStore: CredentialStore, boardsManager: BoardsManager) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('auth.signout', async () => {
 		credentialStore.logout();
@@ -20,6 +21,10 @@ export function registerCommands(context: vscode.ExtensionContext, telemetry: IT
 
 	context.subscriptions.push(vscode.commands.registerCommand('auth.login', async () => {
 		credentialStore.login();
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('board.select', async () => {
+		boardsManager.selectDefaultBoard();
 	}));
 
 	// context.subscriptions.push(vscode.commands.registerCommand('pr.signin', async () => {

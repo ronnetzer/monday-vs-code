@@ -42,7 +42,7 @@ fetch.Promise = PolyfillPromise;
 let telemetry: TelemetryReporter;
 let mondayKit: MondayKit;
 
-async function init(context: vscode.ExtensionContext, mondayCredentialStore: MondayCredentialStore): Promise<void> {
+async function init(context: vscode.ExtensionContext, mondayCredentialStore: MondayCredentialStore, boardsManager: BoardsManager): Promise<void> {
 	context.subscriptions.push(Logger);
 	Logger.appendLine('Monday board found, initializing items manager.');
 
@@ -62,7 +62,7 @@ async function init(context: vscode.ExtensionContext, mondayCredentialStore: Mon
 	// });
 	// const reviewManager = new ReviewManager(context, repository, prManager, tree, telemetry);
 	// await tree.initialize(prManager);
-	registerCommands(context, telemetry, mondayCredentialStore);
+	registerCommands(context, telemetry, mondayCredentialStore, boardsManager);
 
 	// git.onDidChangeState(() => {
 	// 	reviewManager.updateState();
@@ -159,7 +159,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
 	// const selectedRepository = apiImpl.repositories.find(repository => repository.ui.selected) || apiImpl.repositories[0];
 
 	// if (selectedRepository) {
-	await init(context, mondayCredentialStore);
+	await init(context, mondayCredentialStore, boardsManager);
 	// } else {
 	// 	onceEvent(apiImpl.onDidOpenRepository)(r => init(context, mondayCredentialStore, apiImpl, gitAPI, credentialStore, r, prTree, liveshareApiPromise));
 	// }
