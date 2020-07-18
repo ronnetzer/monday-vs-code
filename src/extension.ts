@@ -4,30 +4,31 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import * as vscode from 'vscode';
-import TelemetryReporter from 'vscode-extension-telemetry';
 // import { Repository } from './api/api';
 // import { ApiImpl } from './api/api1';
-import { registerCommands } from './commands';
-import Logger from './common/logger';
-import { Resource } from './common/resources';
-import { handler as uriHandler } from './common/uri';
 // import { onceEvent } from './common/utils';
-import * as PersistentState from './common/persistentState';
-import { EXTENSION_ID } from './constants';
 // import { PullRequestManager } from './github/pullRequestManager';
 // import { registerBuiltinGitProvider, registerLiveShareGitProvider } from './gitProviders/api';
-import { FileTypeDecorationProvider } from './view/fileTypeDecorationProvider';
 // import { PullRequestsTreeDataProvider } from './view/prsTreeDataProvider';
 // import { ReviewManager } from './view/reviewManager';
 // import { IssueFeatureRegistrar } from './issues/issueFeatureRegistrar';
 // import { CredentialStore } from './github/credentials';
 
-import { CredentialStore as MondayCredentialStore } from './monday/credentials';
-
 // import { GitExtension, GitAPI } from './typings/git';
 // import { GitHubContactServiceProvider } from './gitProviders/GitHubContactServiceProvider';
 // import { LiveShare } from 'vsls/vscode.js';
+
+import * as WorkspaceState from './common/workspaceState';
+import * as PersistentState from './common/persistentState';
+import * as vscode from 'vscode';
+import TelemetryReporter from 'vscode-extension-telemetry';
+import { registerCommands } from './commands';
+import Logger from './common/logger';
+import { Resource } from './common/resources';
+import { handler as uriHandler } from './common/uri';
+import { FileTypeDecorationProvider } from './view/fileTypeDecorationProvider';
+import { EXTENSION_ID } from './constants';
+import { CredentialStore as MondayCredentialStore } from './monday/credentials';
 import { MondayKit } from './monday/kit';
 import { BoardsManager } from './monday/boardsManager';
 
@@ -39,6 +40,7 @@ const PolyfillPromise = require('es6-promise').Promise;
 fetch.Promise = PolyfillPromise;
 
 let telemetry: TelemetryReporter;
+let mondayKit: MondayKit;
 
 async function init(context: vscode.ExtensionContext, mondayCredentialStore: MondayCredentialStore): Promise<void> {
 	context.subscriptions.push(Logger);
@@ -127,9 +129,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
 	context.subscriptions.push(telemetry);
 
 	PersistentState.init(context);
+	WorkspaceState.init(context);
 
 	const mondayCredentialStore = new MondayCredentialStore(telemetry);
-	await mondayCredentialStore.initialize();
+	mondayKit = await mondayCredentialStore.initialize();
 
 	// const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports;
 	// const gitAPI = gitExtension.getAPI(1);
@@ -143,8 +146,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
 
 	Logger.appendLine('Looking for Monday board');
 
-	const boardsManager = new BoardsManager(telemetry);
-	const selectedBoard = boardsManager.init();
+	const boardsManager = new BoardsManager(telemetry, mondayKit.sdk);
+	const selectedBoard = await boardsManager.init();
 	// TODO: instantiate BoardsManager(...) @daniel.netzer
 
 	Logger.appendLine(`Found default board: ${selectedBoard}`);

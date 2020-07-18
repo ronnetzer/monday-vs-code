@@ -6,6 +6,11 @@ import * as mondaySdk from 'monday-sdk-js';
 import { parse } from 'url';
 import Logger from '../common/logger';
 
+export interface MondaySDKResponse<T> {
+	data: T;
+	account_id: string;
+}
+
 // access_token	An access token that can be used to make calls to the monday.com API. It is valid for 30 days.
 // token_type	Bearer -- all monday OAuth tokens are bearer token.
 // scope	A space-separated list of scopes that have been granted for this access token.
@@ -54,6 +59,8 @@ export class MondayKit {
 		} else {
 			this.setSession(session);
 		}
+
+		return this;
 	}
 
 	get sdk() {

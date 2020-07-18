@@ -17,7 +17,7 @@ export class CredentialStore {
 
 	constructor(private readonly _telemetry: ITelemetry) { }
 
-	public async initialize(): Promise<void> {
+	public async initialize(): Promise<MondayKit> {
 		this._mondayAPI = new MondayKit();
 		return this._mondayAPI.init();
 	}
@@ -78,8 +78,7 @@ export class CredentialStore {
 
 		while (retry) {
 			try {
-				monday = new MondayKit();
-				await monday.init();
+				monday = await this.initialize();
 			} catch (e) {
 				Logger.appendLine(`Error signing in to Monday: ${e}`);
 				if (e instanceof Error && e.stack) {
