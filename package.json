@@ -331,123 +331,18 @@
     "commands": [
       {
         "command": "auth.signout",
-        "title": "Sign out of Monday",
+        "title": "Sign out",
         "category": "Monday"
       },
       {
         "command": "auth.login",
-        "title": "Sign in to Monday",
+        "title": "Login",
         "category": "Monday"
       },
       {
-        "command": "issue.createIssueFromSelection",
-        "title": "Create Issue From Selection",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.createIssueFromClipboard",
-        "title": "Create Issue From Clipboard",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.copyGithubPermalink",
-        "title": "Copy GitHub Permalink",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.openGithubPermalink",
-        "title": "Open Permalink in Github",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.openIssue",
-        "title": "Open Issue",
-        "category": "GitHub Issues",
-        "icon": "$(globe)"
-      },
-      {
-        "command": "issue.copyIssueNumber",
-        "title": "Copy Number",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.copyIssueUrl",
-        "title": "Copy Url",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.refresh",
-        "title": "Refresh",
-        "category": "GitHub Issues",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "issue.suggestRefresh",
-        "title": "Refresh Suggestions",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.startWorking",
-        "title": "Start Working on Issue",
-        "category": "GitHub Issues",
-        "icon": "$(arrow-right)"
-      },
-      {
-        "command": "issue.continueWorking",
-        "title": "Continue Working on Issue",
-        "category": "GitHub Issues",
-        "icon": "$(arrow-right)"
-      },
-      {
-        "command": "issue.startWorkingBranchPrompt",
-        "title": "Start Working and Set Branch...",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.stopWorking",
-        "title": "Stop Working on Issue",
-        "category": "GitHub Issues",
-        "icon": "$(primitive-square)"
-      },
-      {
-        "command": "issue.statusBar",
-        "title": "Current Issue Options",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.getCurrent",
-        "title": "Get current issue",
-        "category": "GitHub Issues"
-      },
-      {
-        "command": "issue.editQuery",
-        "title": "Edit Query",
-        "category": "GitHub Issues",
-        "icon": "$(edit)"
-      },
-      {
-        "command": "issue.createIssue",
-        "title": "Create an Issue",
-        "category": "GitHub Issues",
-        "icon": "$(plus)"
-      },
-      {
-        "command": "issue.createIssueFromFile",
-        "title": "Create Issue",
-        "icon": "$(check)"
-      },
-      {
-        "command": "issue.issueCompletion",
-        "title": "Issue Completion Chosen"
-      },
-      {
-        "command": "issue.userCompletion",
-        "title": "User Completion Chosen"
-      },
-      {
-        "command": "issue.signinAndRefreshList",
-        "title": "Sign in and Refresh",
-        "category": "GitHub Issues"
+        "command": "board.select",
+        "title": "Switch Default Board",
+        "category": "Monday"
       }
     ],
     "viewsWelcome": [

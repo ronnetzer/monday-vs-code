@@ -54,7 +54,9 @@ export class BoardsManager {
 		// if we have defaultBoard, check if he exists in the boards list.
 		// otherwise prompt the user to select his default board
 		// TODO: support multiple boards in a single project/workspace.
-		await this.selectDefaultBoard();
+		if (!this.defaultBoard || !this.defaultBoard.id || !this.boards.find((board) => board.id === this.defaultBoard.id)) {
+			await this.selectDefaultBoard();
+		}
 
 		this._telemetry.sendTelemetryEvent('boards.manager.success');
 
@@ -62,15 +64,13 @@ export class BoardsManager {
 	}
 
 	public async selectDefaultBoard() {
-		if (!this.defaultBoard || !this.defaultBoard.id || !this.boards.find((board) => board.id === this.defaultBoard.id)) {
-			const choices = this.getBoardsChoices();
-			const response: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(choices, { placeHolder: 'Default monday board for this workspace' });
-			if (response) {
-				this.setDefaultBoard(this.boards.find(board => board.id === response.description) as Board);
-			} else {
-				this._telemetry.sendTelemetryEvent('boards.manager.fail');
-				throw new Error('No default board selected');
-			}
+		const choices = this.getBoardsChoices();
+		const response: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(choices, { placeHolder: 'Default monday board for this workspace' });
+		if (response) {
+			this.setDefaultBoard(this.boards.find(board => board.id === response.description) as Board);
+		} else {
+			this._telemetry.sendTelemetryEvent('boards.manager.fail');
+			throw new Error('No default board selected');
 		}
 	}
 
