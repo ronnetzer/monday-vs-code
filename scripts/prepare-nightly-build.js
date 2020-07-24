@@ -32,9 +32,9 @@ fs.writeFileSync('./package.insiders.json', JSON.stringify(insiderPackageJson));
 
 const readme = fs.readFileSync('./README.md');
 const previewReadme = `
-# GitHub Pull Request Nightly Build
+# Monday VSCode Extension Nightly Build
 
-This is the nightly build of [GitHub Pull Request extension](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-pull-request-github) for early feedback and testing.
+This is the nightly build of [GitHub Pull Request extension](https://marketplace.visualstudio.com/items?itemName=Netzer.monday-vscode-extension) for early feedback and testing.
 
 The extension can be installed side-by-side with the current GitHub Pull Request extension, use the Extensions Viewlet to disable this version of the extension you do not want to use.
 
@@ -44,5 +44,5 @@ ${readme}
 fs.writeFileSync('./README.insiders.md', previewReadme);
 
 const constants = fs.readFileSync('./src/constants.ts').toString();
-const insiderConstants = constants.replace(`export const EXTENSION_ID = 'GitHub.vscode-pull-request-github';`, `export const EXTENSION_ID = 'GitHub.vscode-pull-request-github';`);
+const insiderConstants = constants.replace(`export const EXTENSION_ID = 'monday-vscode-extension';`, `export const EXTENSION_ID = 'monday-vscode-extension';`);
 fs.writeFileSync('./src/constants.insiders.ts', insiderConstants);

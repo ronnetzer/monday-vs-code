@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { ITelemetry } from '../common/telemetry';
 import { MondaySDK } from 'monday-sdk-js';
 import { MondaySDKResponse } from './kit';
+import Logger from '../common/logger';
 
 // all / active / archived / deleted
 export enum BoardState {
@@ -40,10 +41,7 @@ export class BoardsManager {
 		this._telemetry.sendTelemetryEvent('boards.manager.init');
 		this.setDefaultBoard(WorkspaceState.fetch('monday', 'defaultBoard') as Board);
 
-		const boardsQuery = this.allBoardsQuery();
-
-		const boardsResponse = await this._mondaySDK.api(boardsQuery, '') as MondaySDKResponse<Boards>;
-		this.boards = boardsResponse.data.boards;
+		await this.getEntries();
 
 		// if we have 0 boards, throw an error.
 		if (this.boards.length <= 0) {
@@ -63,6 +61,13 @@ export class BoardsManager {
 		return this.defaultBoard;
 	}
 
+	public async getEntries() {
+		Logger.appendLine('Fetching boards');
+		const boardsQuery = this.allBoardsQuery();
+		const boardsResponse = await this._mondaySDK.api(boardsQuery, '') as MondaySDKResponse<Boards>;
+		this.boards = boardsResponse.data.boards;
+	}
+
 	public async selectDefaultBoard() {
 		const choices = this.getBoardsChoices();
 		const response: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(choices, { placeHolder: 'Default monday board for this workspace' });
@@ -74,7 +79,7 @@ export class BoardsManager {
 		}
 	}
 
-	private setDefaultBoard(board: Board) {
+	public setDefaultBoard(board: Board) {
 		this.defaultBoard = board;
 		WorkspaceState.store('monday', 'defaultBoard', this.defaultBoard);
 	}

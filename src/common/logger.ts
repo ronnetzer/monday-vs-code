@@ -6,7 +6,7 @@ const enum LogLevel {
 	Off
 }
 
-const SETTINGS_NAMESPACE = 'mondayIntegration';
+const SETTINGS_NAMESPACE = 'mondayExtension';
 const LOG_LEVEL_SETTING = 'logLevel';
 
 class Log {
@@ -15,7 +15,7 @@ class Log {
 	private _disposable: vscode.Disposable;
 
 	constructor() {
-		this._outputChannel = vscode.window.createOutputChannel('Monday Integration');
+		this._outputChannel = vscode.window.createOutputChannel('Monday Extension');
 		this._disposable = vscode.workspace.onDidChangeConfiguration(() => {
 			this.getLogLevel();
 		});

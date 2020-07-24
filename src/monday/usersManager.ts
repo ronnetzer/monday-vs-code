@@ -22,10 +22,7 @@ export class UsersManager {
 		// TODO: load from api all possible boards, check the state to see if the default board is defined.
 		this._telemetry.sendTelemetryEvent('users.manager.init');
 
-		const boardsQuery = this.allNonGuestUsersQuery();
-
-		const usersResponse = await this._mondaySDK.api(boardsQuery, '') as MondaySDKResponse<Users>;
-		this.users = usersResponse.data.users;
+		await this.getEntries();
 
 		// if we have 0 boards, throw an error.
 		if (this.users.length <= 0) {
@@ -34,6 +31,12 @@ export class UsersManager {
 		}
 
 		this._telemetry.sendTelemetryEvent('users.manager.success');
+	}
+
+	public async getEntries() {
+		const boardsQuery = this.allNonGuestUsersQuery();
+		const usersResponse = await this._mondaySDK.api(boardsQuery, '') as MondaySDKResponse<Users>;
+		this.users = usersResponse.data.users;
 	}
 
 	private allNonGuestUsersQuery() {
