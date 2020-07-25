@@ -39,10 +39,10 @@ export class UserCompletionProvider implements vscode.CompletionItemProvider {
 		const completionItems: vscode.CompletionItem[] = [];
 		(await this.stateManager.userMap).forEach(user => {
 			const completionItem: UserCompletionItem = new UserCompletionItem(user.name, vscode.CompletionItemKind.User);
-			completionItem.insertText = `@${user.name}`;
+			completionItem.insertText = `@${user.name};`;
 			completionItem.range = range;
 			completionItem.data = user;
-			completionItem.detail = user.name;
+			completionItem.detail = user.isTeam ? 'Team' : user.email;
 			completionItem.filterText = `@ ${user.name} ${user.email}`;
 			completionItems.push(completionItem);
 		});

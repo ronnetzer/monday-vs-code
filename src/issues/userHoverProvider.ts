@@ -8,7 +8,6 @@ import { userMarkdown, USER_EXPRESSION, shouldShowHover } from './util';
 import { ITelemetry } from '../common/telemetry';
 import { UsersManager, UserDetails } from '../monday/usersManager';
 import { StateManager } from './stateManager';
-import { url } from 'inspector';
 
 export class UserHoverProvider implements vscode.HoverProvider {
 	constructor(private stateManager: StateManager, private usersManager: UsersManager, private telemetry: ITelemetry) { }
