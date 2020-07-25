@@ -9,7 +9,7 @@ import { StateManager } from './stateManager';
 import { IssueModel } from '../github/issueModel';
 import { IMilestone } from '../github/interface';
 import { MilestoneModel } from '../github/milestoneModel';
-import { PullRequestManager, PullRequestDefaults } from '../github/pullRequestManager';
+import { UsersManager } from '../monday/usersManager';
 
 class IssueCompletionItem extends vscode.CompletionItem {
 	constructor(public readonly issue: IssueModel) {
@@ -19,7 +19,7 @@ class IssueCompletionItem extends vscode.CompletionItem {
 
 export class IssueCompletionProvider implements vscode.CompletionItemProvider {
 
-	constructor(private stateManager: StateManager, private pullRequestManager: PullRequestManager, private context: vscode.ExtensionContext) { }
+	constructor(private stateManager: StateManager, private usersManager: UsersManager, private context: vscode.ExtensionContext) { }
 
 	async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): Promise<vscode.CompletionItem[]> {
 		// If the suggest was not triggered by the trigger character, require that the previous character be the trigger character
@@ -52,12 +52,6 @@ export class IssueCompletionProvider implements vscode.CompletionItemProvider {
 
 		const completionItems: Map<string, vscode.CompletionItem> = new Map();
 		const now = new Date();
-		let repo: PullRequestDefaults | undefined;
-		try {
-			repo = await this.pullRequestManager.getPullRequestDefaults();
-		} catch (e) {
-			// leave repo undefined
-		}
 		const issueData = this.stateManager.issueCollection;
 		for (const issueQuery of issueData) {
 			const issuesOrMilestones: IssueModel[] | MilestoneModel[] = await issueQuery[1] ?? [];
@@ -67,13 +61,13 @@ export class IssueCompletionProvider implements vscode.CompletionItemProvider {
 			if (issuesOrMilestones[0] instanceof IssueModel) {
 				let index = 0;
 				for (const issue of issuesOrMilestones) {
-					completionItems.set(getIssueNumberLabel(<IssueModel>issue), await this.completionItemFromIssue(repo, <IssueModel>issue, now, range, document, index++));
+					completionItems.set(getIssueNumberLabel(<IssueModel>issue), await this.completionItemFromIssue(<IssueModel>issue, now, range, document, index++));
 				}
 			} else {
 				for (let index = 0; index < issuesOrMilestones.length; index++) {
 					const value: MilestoneModel = <MilestoneModel>issuesOrMilestones[index];
 					for (const issue of value.issues) {
-						completionItems.set(getIssueNumberLabel(issue), await this.completionItemFromIssue(repo, issue, now, range, document, index, value.milestone));
+						completionItems.set(getIssueNumberLabel(issue), await this.completionItemFromIssue(issue, now, range, document, index, value.milestone));
 					}
 				}
 			}
@@ -81,16 +75,16 @@ export class IssueCompletionProvider implements vscode.CompletionItemProvider {
 		return [...completionItems.values()];
 	}
 
-	private async completionItemFromIssue(repo: PullRequestDefaults | undefined, issue: IssueModel, now: Date, range: vscode.Range, document: vscode.TextDocument, index: number, milestone?: IMilestone): Promise<IssueCompletionItem> {
+	private async completionItemFromIssue(issue: IssueModel, now: Date, range: vscode.Range, document: vscode.TextDocument, index: number, milestone?: IMilestone): Promise<IssueCompletionItem> {
 		const item: IssueCompletionItem = new IssueCompletionItem(issue);
 		if (document.languageId === 'markdown') {
-			item.insertText = `[${getIssueNumberLabel(issue, repo)}](${issue.html_url})`;
+			item.insertText = `[${getIssueNumberLabel(issue)}](${issue.html_url})`;
 		} else {
 			const configuration = vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get('issueCompletionFormatScm');
 			if (document.uri.path.match(/scm\/git\/scm\d\/input/) && (typeof configuration === 'string')) {
-				item.insertText = await variableSubstitution(configuration, issue, repo);
+				item.insertText = await variableSubstitution(configuration, issue);
 			} else {
-				item.insertText = `${getIssueNumberLabel(issue, repo)}`;
+				item.insertText = `${getIssueNumberLabel(issue)}`;
 			}
 		}
 		item.documentation = issue.body;

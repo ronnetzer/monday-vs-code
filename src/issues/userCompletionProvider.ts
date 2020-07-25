@@ -4,14 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { User } from '../github/interface';
-import { PullRequestManager } from '../github/pullRequestManager';
-import { userMarkdown, ISSUES_CONFIGURATION, UserCompletion, isComment } from './util';
+import { userMarkdown, ISSUES_CONFIGURATION, UserCompletionItem, isComment } from './util';
 import { StateManager } from './stateManager';
 import { NEW_ISSUE_SCHEME } from './issueFile';
+import { UsersManager, UserDetails } from '../monday/usersManager';
 
 export class UserCompletionProvider implements vscode.CompletionItemProvider {
-	constructor(private stateManager: StateManager, private manager: PullRequestManager, context: vscode.ExtensionContext) {
+	constructor(private stateManager: StateManager, private usersManager: UsersManager, context: vscode.ExtensionContext) {
 	}
 
 	async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): Promise<vscode.CompletionItem[]> {
@@ -38,23 +37,23 @@ export class UserCompletionProvider implements vscode.CompletionItemProvider {
 		}
 
 		const completionItems: vscode.CompletionItem[] = [];
-		(await this.stateManager.userMap).forEach(item => {
-			const completionItem: UserCompletion = new UserCompletion(item.login, vscode.CompletionItemKind.User);
-			completionItem.insertText = `@${item.login}`;
-			completionItem.login = item.login;
+		(await this.stateManager.userMap).forEach(user => {
+			const completionItem: UserCompletionItem = new UserCompletionItem(user.name, vscode.CompletionItemKind.User);
+			completionItem.insertText = `@${user.name}`;
 			completionItem.range = range;
-			completionItem.detail = item.name;
-			completionItem.filterText = `@ ${item.login} ${item.name}`;
+			completionItem.data = user;
+			completionItem.detail = user.name;
+			completionItem.filterText = `@ ${user.name} ${user.email}`;
 			completionItems.push(completionItem);
 		});
 		return completionItems;
 	}
 
-	async resolveCompletionItem(item: UserCompletion, token: vscode.CancellationToken): Promise<vscode.CompletionItem> {
-		const repo = await this.manager.getPullRequestDefaults();
-		const user: User | undefined = await this.manager.resolveUser(repo.owner, repo.repo, item.login);
-		if (user) {
-			item.documentation = userMarkdown(repo, user);
+	async resolveCompletionItem(item: UserCompletionItem, token: vscode.CancellationToken): Promise<vscode.CompletionItem> {
+		const userDetails: UserDetails = await this.usersManager.getUserDetails([item.data.id]);
+		if (userDetails) {
+			item.data = { ...item.data, ...userDetails };
+			item.documentation = userMarkdown(item.data);
 			item.command = {
 				command: 'issues.userCompletion',
 				title: 'User Completion Chosen'

@@ -3,9 +3,14 @@ declare module 'monday-sdk-js' {
 	export = init;
 
 	namespace init {
+    export interface MondaySDKResponse<T> {
+      data: T;
+      account_id: string;
+    }
+
 		export interface MondaySDK {
 			setToken: (token: string) => void;
-			api: (query: string, options: any) => Promise<any>;
+			api: <T = any>(query: string, options: any) => Promise<MondaySDKResponse<T>>;
 			oauthToken: (code: string, clientId: string, clientSecret: string) => Promise<any>;
 		}
 	}

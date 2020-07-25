@@ -6,12 +6,14 @@
 import * as LRUCache from 'lru-cache';
 import * as vscode from 'vscode';
 import { IssueModel } from '../github/issueModel';
-import { IAccount } from '../github/interface';
-import { PullRequestManager, PRManagerState, NO_MILESTONE, PullRequestDefaults } from '../github/pullRequestManager';
+import { NO_MILESTONE, PullRequestDefaults } from '../github/pullRequestManager';
 import { MilestoneModel } from '../github/milestoneModel';
-import { GitAPI } from '../typings/git';
-import { ISSUES_CONFIGURATION, BRANCH_CONFIGURATION, QUERIES_CONFIGURATION, DEFAULT_QUERY_CONFIGURATION, variableSubstitution } from './util';
+import { CredentialStore as MondayCredentialStore } from '../monday/credentials';
+import { ISSUES_CONFIGURATION, BRANCH_CONFIGURATION, QUERIES_CONFIGURATION, DEFAULT_QUERY_CONFIGURATION, variableSubstitution, convertTeamToUser } from './util';
 import { CurrentIssue } from './currentIssue';
+import { BoardsManager } from '../monday/boardsManager';
+import { UsersManager, User } from '../monday/usersManager';
+import { ITelemetry } from '../common/telemetry';
 
 // TODO: make exclude from date words configurable
 const excludeFromDate: string[] = ['Recovery'];
@@ -39,8 +41,7 @@ const DEFAULT_QUERY_CONFIGURATION_VALUE = [{ label: 'My Issues', query: 'default
 
 export class StateManager {
 	public readonly resolvedIssues: LRUCache<string, IssueModel> = new LRUCache(50); // 50 seems big enough
-	private _userMap: Promise<Map<string, IAccount>> | undefined;
-	private _lastHead: string | undefined;
+	private _userMap: Promise<Map<string, User>> | undefined;
 	private _issueCollection: Map<string, Promise<MilestoneModel[] | IssueModel[]>> = new Map();
 	private _onRefreshCacheNeeded: vscode.EventEmitter<void> = new vscode.EventEmitter();
 	public onRefreshCacheNeeded: vscode.Event<void> = this._onRefreshCacheNeeded.event;
@@ -59,52 +60,25 @@ export class StateManager {
 	}
 
 	constructor(
-		readonly gitAPI: GitAPI,
-		private manager: PullRequestManager,
+		readonly mondayCredentialStore: MondayCredentialStore,
+		readonly boardsManager: BoardsManager,
+		readonly usersManager: UsersManager,
+		private telemetry: ITelemetry,
 		private context: vscode.ExtensionContext
-	) {
-		this.context.subscriptions.push(this.manager.onDidChangeRepositories(() => this.refresh()));
-	}
+	) {}
 
 	async tryInitializeAndWait() {
 		if (!this.initializePromise) {
-			this.initializePromise = new Promise(resolve => {
-				if (this.manager.state === PRManagerState.RepositoriesLoaded) {
-					this.doInitialize();
-					resolve();
+			this.initializePromise = new Promise((resolve, reject) => {
+				if (this.mondayCredentialStore.isAuthenticated()) {
+					return this.doInitialize().then(() => resolve());
 				} else {
-					const disposable = this.manager.onDidChangeState(() => {
-						if (this.manager.state === PRManagerState.RepositoriesLoaded) {
-							this.doInitialize();
-							disposable.dispose();
-							resolve();
-						}
-					});
-					this.context.subscriptions.push(disposable);
+					this.telemetry.sendTelemetryErrorEvent('issues.stateManager.unauthorize');
+					reject('unauthorized');
 				}
 			});
 		}
 		return this.initializePromise;
-	}
-
-	private registerRepositoryChangeEvent() {
-		this.gitAPI.repositories.forEach(repository => {
-			this.context.subscriptions.push(repository.state.onDidChange(async () => {
-				if ((repository.state.HEAD ? repository.state.HEAD.commit : undefined) !== this._lastHead) {
-					this._lastHead = (repository.state.HEAD ? repository.state.HEAD.commit : undefined);
-					await this.setIssueData();
-				}
-
-				const newBranch = repository.state.HEAD?.name;
-				if (!this.currentIssue || (newBranch !== this.currentIssue.branchName)) {
-					if (newBranch) {
-						await this.setCurrentIssueFromBranch(newBranch);
-					} else {
-						await this.setCurrentIssue(undefined);
-					}
-				}
-			}));
-		});
 	}
 
 	refreshCacheNeeded() {
@@ -117,29 +91,10 @@ export class StateManager {
 
 	private async doInitialize() {
 		this.cleanIssueState();
-		this._queries = vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get(QUERIES_CONFIGURATION, DEFAULT_QUERY_CONFIGURATION_VALUE);
-		if (this._queries.length === 0) {
-			this._queries = DEFAULT_QUERY_CONFIGURATION_VALUE;
-		}
-		this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(change => {
-			if (change.affectsConfiguration(`${ISSUES_CONFIGURATION}.${QUERIES_CONFIGURATION}`)) {
-				this._queries = vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get(QUERIES_CONFIGURATION, DEFAULT_QUERY_CONFIGURATION_VALUE);
-				this._onRefreshCacheNeeded.fire();
-			} else if (change.affectsConfiguration(`${ISSUES_CONFIGURATION}.${IGNORE_MILESTONES_CONFIGURATION}`)) {
-				this._onRefreshCacheNeeded.fire();
-			}
-		}));
-		this._lastHead = this.manager.repository.state.HEAD ? this.manager.repository.state.HEAD.commit : undefined;
 		await this.setIssueData();
-		this.registerRepositoryChangeEvent();
 		this.context.subscriptions.push(this.onRefreshCacheNeeded(async () => {
 			await this.refresh();
 		}));
-		const branch = this.manager.repository.state.HEAD?.name;
-		if (!this.currentIssue && branch) {
-			await this.setCurrentIssueFromBranch(branch);
-
-		}
 	}
 
 	private cleanIssueState() {
@@ -156,19 +111,18 @@ export class StateManager {
 		}
 	}
 
-	private async getUsers(): Promise<Map<string, IAccount>> {
+	private async getUsers(): Promise<Map<string, User>> {
 		await this.initializePromise;
-		const assignableUsers = await this.manager.getAssignableUsers();
-		const userMap: Map<string, IAccount> = new Map();
-		for (const remote in assignableUsers) {
-			assignableUsers[remote].forEach(account => {
-				userMap.set(account.login, account);
-			});
+		const assignableUsers = await Promise.all([this.usersManager.getUserTeams(), this.usersManager.getAssignableUsers()])
+			.then(([teams, users]) => [...teams.map(convertTeamToUser), ...users]);
+		const userMap: Map<string, User> = new Map();
+		for (const user of assignableUsers) {
+			userMap.set(user.name, user);
 		}
 		return userMap;
 	}
 
-	get userMap(): Promise<Map<string, IAccount>> {
+	get userMap(): Promise<Map<string, User>> {
 		if (!this.initializePromise) {
 			return Promise.resolve(new Map());
 		}
@@ -178,8 +132,8 @@ export class StateManager {
 		return this._userMap;
 	}
 
-	private async getCurrentUser(): Promise<string | undefined> {
-		return (await this.manager.credentialStore.getCurrentUser()).login;
+	private async getCurrentUser(): Promise<string> {
+		return this.usersManager.currentUser.name;
 	}
 
 	private async setIssueData() {
@@ -187,13 +141,12 @@ export class StateManager {
 		let defaults: PullRequestDefaults | undefined;
 		let user: string | undefined;
 		for (const query of this._queries || []) {
-			let items: Promise<IssueModel[] | MilestoneModel[]>;
+			let items: Promise<IssueModel[] | MilestoneModel[]> = Promise.resolve([]);
 			if (query.query === DEFAULT_QUERY_CONFIGURATION) {
-				items = this.setMilestones();
 			} else {
 				if (!defaults) {
 					try {
-						defaults = await this.manager.getPullRequestDefaults();
+						// defaults = await this.manager.getPullRequestDefaults();
 					} catch (e) {
 						// leave defaults undefined
 					}
@@ -205,99 +158,16 @@ export class StateManager {
 			}
 			this._issueCollection.set(query.label, items);
 		}
-		this._maxIssueNumber = await this.manager.getMaxIssue();
+		// this._maxIssueNumber = await this.manager.getMaxIssue();
 	}
 
+	// TODO: @rn set tasks
 	private setIssues(query: string): Promise<IssueModel[]> {
 		return new Promise(async (resolve) => {
-			const issues = await this.manager.getIssues({ fetchNextPage: false }, query);
+			// const issues = await this.manager.getIssues({ fetchNextPage: false }, query);
 			this._onDidChangeIssueData.fire();
-			resolve(issues.items);
+			resolve([]);
 		});
-	}
-
-	private async setCurrentIssueFromBranch(branchName: string) {
-		const createBranchConfig = <string>vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get(BRANCH_CONFIGURATION);
-		if (createBranchConfig === 'off') {
-			return;
-		}
-
-		let defaults: PullRequestDefaults | undefined;
-		try {
-			defaults = await this.manager.getPullRequestDefaults();
-		} catch (e) {
-			// No remote, don't try to set the current issue
-			return;
-		}
-		if (branchName === defaults.base) {
-			await this.setCurrentIssue(undefined);
-			return;
-		}
-
-		if (this._currentIssue && (this._currentIssue.branchName === branchName)) {
-			return;
-		}
-
-		const state: IssuesState = this.getSavedState();
-		for (const branch in state.branches) {
-			if (branch === branchName) {
-				const issueModel = await this.manager.resolveIssue(state.branches[branch].owner, state.branches[branch].repositoryName, state.branches[branch].number);
-				if (issueModel) {
-					await this.setCurrentIssue(new CurrentIssue(issueModel, this.manager, this));
-				}
-				return;
-			}
-		}
-	}
-
-	private setMilestones(): Promise<MilestoneModel[]> {
-		return new Promise(async (resolve) => {
-			const now = new Date();
-			const skipMilestones: string[] = vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get(IGNORE_MILESTONES_CONFIGURATION, []);
-			const milestones = await this.manager.getMilestones({ fetchNextPage: false }, skipMilestones.indexOf(NO_MILESTONE) < 0);
-			let mostRecentPastTitleTime: Date | undefined = undefined;
-			const milestoneDateMap: Map<string, Date> = new Map();
-			const milestonesToUse: MilestoneModel[] = [];
-
-			// The number of milestones is expected to be very low, so two passes through is negligible
-			for (let i = 0; i < milestones.items.length; i++) {
-				const item = milestones.items[i];
-				const milestone = milestones.items[i].milestone;
-				if ((item.issues && item.issues.length <= 0) || (skipMilestones.indexOf(milestone.title) >= 0)) {
-					continue;
-				}
-
-				milestonesToUse.push(item);
-				let milestoneDate = milestone.dueOn ? new Date(milestone.dueOn) : undefined;
-				if (!milestoneDate) {
-					milestoneDate = new Date(this.removeDateExcludeStrings(milestone.title));
-					if (isNaN(milestoneDate.getTime())) {
-						milestoneDate = new Date(milestone.createdAt!);
-					}
-				}
-				if ((milestoneDate < now) && ((mostRecentPastTitleTime === undefined) || (milestoneDate > mostRecentPastTitleTime))) {
-					mostRecentPastTitleTime = milestoneDate;
-				}
-				milestoneDateMap.set(milestone.id ? milestone.id : milestone.title, milestoneDate);
-			}
-
-			milestonesToUse.sort((a: MilestoneModel, b: MilestoneModel): number => {
-				const dateA = milestoneDateMap.get(a.milestone.id ? a.milestone.id : a.milestone.title)!;
-				const dateB = milestoneDateMap.get(b.milestone.id ? b.milestone.id : b.milestone.title)!;
-				if (mostRecentPastTitleTime && (dateA >= mostRecentPastTitleTime) && (dateB >= mostRecentPastTitleTime)) {
-					return dateA <= dateB ? -1 : 1;
-				} else {
-					return dateA >= dateB ? -1 : 1;
-				}
-			});
-			this._onDidChangeIssueData.fire();
-			resolve(milestonesToUse);
-		});
-	}
-
-	private removeDateExcludeStrings(possibleDate: string): string {
-		excludeFromDate.forEach(exclude => possibleDate = possibleDate.replace(exclude, ''));
-		return possibleDate;
 	}
 
 	get currentIssue(): CurrentIssue | undefined {

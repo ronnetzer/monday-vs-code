@@ -5,6 +5,7 @@
 
 /// <reference path='./vscode.d.ts'/>
 /// <reference path='./vscode.proposed.d.ts'/>
+/// <reference path='./monday.d.ts'/>
 /// <reference path='./git-credential-node.d.ts'/>
 /// <reference path='./graphql.d.ts'/>
 

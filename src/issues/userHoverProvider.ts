@@ -4,12 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { PullRequestManager } from '../github/pullRequestManager';
 import { userMarkdown, USER_EXPRESSION, shouldShowHover } from './util';
 import { ITelemetry } from '../common/telemetry';
+import { UsersManager, UserDetails } from '../monday/usersManager';
+import { StateManager } from './stateManager';
+import { url } from 'inspector';
 
 export class UserHoverProvider implements vscode.HoverProvider {
-	constructor(private manager: PullRequestManager, private telemetry: ITelemetry) { }
+	constructor(private stateManager: StateManager, private usersManager: UsersManager, private telemetry: ITelemetry) { }
 
 	async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Hover | undefined> {
 		if (!(await shouldShowHover(document, position))) {
@@ -31,14 +33,14 @@ export class UserHoverProvider implements vscode.HoverProvider {
 
 	private async createHover(username: string, range: vscode.Range): Promise<vscode.Hover | undefined> {
 		try {
-			const origin = await this.manager.getPullRequestDefaults();
-			const user = await this.manager.resolveUser(origin.owner, origin.repo, username);
+			const user = (await this.stateManager.userMap).get(username);
 			if (user && user.name) {
+				const details = user.isTeam ? user : await this.usersManager.getUserDetails([user.id]);
 				/* __GDPR__
 					"issue.userHover" : {}
 				*/
 				this.telemetry.sendTelemetryEvent('issues.userHover');
-				return new vscode.Hover(userMarkdown(origin, user), range);
+				return new vscode.Hover(userMarkdown({ ...user, ...details }), range);
 			} else {
 				return;
 			}

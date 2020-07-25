@@ -17,22 +17,14 @@ export class CurrentIssue {
 	private user: string | undefined;
 	private repo: Repository | undefined;
 	private repoDefaults: PullRequestDefaults | undefined;
-	constructor(private issueModel: IssueModel, private manager: PullRequestManager, private stateManager: StateManager, private shouldPromptForBranch?: boolean) {
-		this.setRepo();
+	constructor(private issueModel: IssueModel, private stateManager: StateManager, private shouldPromptForBranch?: boolean) {
+		this.setBoard();
 	}
 
-	private setRepo() {
-		for (let i = 0; i < this.stateManager.gitAPI.repositories.length; i++) {
-			const repo = this.stateManager.gitAPI.repositories[i];
-			for (let j = 0; j < repo.state.remotes.length; j++) {
-				const remote = repo.state.remotes[j];
-				if (remote.name === this.issueModel.githubRepository.remote.remoteName &&
-					(remote.fetchUrl?.toLowerCase().search(`${this.issueModel.githubRepository.remote.owner.toLowerCase()}/${this.issueModel.githubRepository.remote.repositoryName.toLowerCase()}`) !== -1)) {
-					this.repo = repo;
-					return;
-				}
-			}
-		}
+	private setBoard() {
+	}
+
+	private setGroup() {
 	}
 
 	get branchName(): string | undefined {
@@ -44,12 +36,6 @@ export class CurrentIssue {
 	}
 
 	public async startWorking() {
-		try {
-			this.repoDefaults = await this.manager.getPullRequestDefaults();
-		} catch (e) {
-			// leave repoDefaults undefined
-			vscode.window.showErrorMessage('There is no remote. Can\'t start working on an issue.');
-		}
 		await this.createIssueBranch();
 		await this.setCommitMessageAndGitEvent();
 		this.setStatusBar();
@@ -66,7 +52,7 @@ export class CurrentIssue {
 			this.repo.inputBox.value = '';
 		}
 		if (this.repoDefaults) {
-			await this.manager.repository.checkout(this.repoDefaults.base);
+			// await this.manager.repository.checkout(this.repoDefaults.base);
 		}
 		this.dispose();
 	}
@@ -77,8 +63,8 @@ export class CurrentIssue {
 
 	private async branchExists(branch: string): Promise<boolean> {
 		try {
-			const repoBranch = await this.manager.repository.getBranch(branch);
-			return !!repoBranch;
+			// const repoBranch = await this.manager.repository.getBranch(branch);
+			// return !!repoBranch;
 		} catch (e) {
 			// branch doesn't exist
 		}
@@ -87,9 +73,9 @@ export class CurrentIssue {
 
 	private async createOrCheckoutBranch(branch: string): Promise<void> {
 		if (await this.branchExists(branch)) {
-			await this.manager.repository.checkout(branch);
+			// await this.manager.repository.checkout(branch);
 		} else {
-			await this.manager.repository.createBranch(branch, true);
+			// await this.manager.repository.createBranch(branch, true);
 		}
 	}
 

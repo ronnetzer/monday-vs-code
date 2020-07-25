@@ -8,11 +8,12 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { PullRequestManager, PullRequestDefaults } from '../github/pullRequestManager';
 import { IssueModel } from '../github/issueModel';
-import { GithubItemStateEnum, User } from '../github/interface';
+import { GithubItemStateEnum } from '../github/interface';
 import { PullRequestModel } from '../github/pullRequestModel';
 import { StateManager } from './stateManager';
 import { ReviewManager } from '../view/reviewManager';
 import { Repository, GitAPI, Remote, Commit, Ref } from '../typings/git';
+import { User, Team } from '../monday/usersManager';
 
 export const ISSUE_EXPRESSION = /(([^\s]+)\/([^\s]+))?(#|GH-)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
 export const ISSUE_OR_URL_EXPRESSION = /(https?:\/\/github\.com\/(([^\s]+)\/([^\s]+))\/([^\s]+\/)?(issues|pull)\/([0-9]+)(#issuecomment\-([0-9]+))?)|(([^\s]+)\/([^\s]+))?(#|GH-)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
@@ -86,39 +87,32 @@ export async function getIssue(stateManager: StateManager, manager: PullRequestM
 	return undefined;
 }
 
-function repoCommitDate(user: User, repoNameWithOwner: string): string | undefined {
-	let date: string | undefined = undefined;
-	user.commitContributions.forEach(element => {
-		if (repoNameWithOwner.toLowerCase() === element.repoNameWithOwner.toLowerCase()) {
-			date = element.createdAt.toLocaleString('default', { day: 'numeric', month: 'short', year: 'numeric' });
-		}
-	});
-	return date;
+export class UserCompletionItem extends vscode.CompletionItem {
+	data: User;
 }
 
-export class UserCompletion extends vscode.CompletionItem {
-	login: string;
+export function convertTeamToUser({ id, name, picture_url: photo_thumb_small }: Team): User {
+	return {
+		id,
+		name,
+		photo_thumb_small,
+		email: '',
+		isTeam: true
+	};
 }
 
-export function userMarkdown(origin: PullRequestDefaults, user: User): vscode.MarkdownString {
+export function userMarkdown(user: User): vscode.MarkdownString {
 	const markdown: vscode.MarkdownString = new vscode.MarkdownString(undefined, true);
-	markdown.appendMarkdown(`![Avatar](${user.avatarUrl}|height=50,width=50) **${user.name}** [${user.login}](${user.url})`);
-	if (user.bio) {
-		markdown.appendText('  \r\n' + user.bio.replace(/\r\n/g, ' '));
-	}
-
-	const date = repoCommitDate(user, origin.owner + '/' + origin.repo);
-	if (user.location || date) {
-		markdown.appendMarkdown('  \r\n\r\n---');
+	markdown.appendMarkdown(`![Avatar](${user.photo_thumb_small}|height=50,width=50) **[${user.name}](${user.url})**`);
+	if (user.title) {
+		markdown.appendText('  \r\n' + user.title.replace(/\r\n/g, ' '));
 	}
 	if (user.location) {
+		markdown.appendMarkdown('  \r\n\r\n---');
 		markdown.appendMarkdown(`  \r\n$(location) ${user.location}`);
 	}
-	if (date) {
-		markdown.appendMarkdown(`  \r\n$(git-commit) Committed to this repository on ${date}`);
-	}
-	if (user.company) {
-		markdown.appendMarkdown(`  \r\n$(jersey) Member of ${user.company}`);
+	if (user.teams?.length) {
+		markdown.appendMarkdown(`  \r\n$(jersey) Member of ${user.teams.map(team => team.name).join(', ')}`);
 	}
 	return markdown;
 }

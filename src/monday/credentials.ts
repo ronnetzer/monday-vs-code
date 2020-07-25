@@ -13,31 +13,29 @@ const PROMPT_FOR_SIGN_IN_SCOPE = 'prompt for sign in';
 const PROMPT_FOR_SIGN_IN_STORAGE_KEY = 'login';
 
 export class CredentialStore {
-	private _mondayAPI: MondayKit | undefined;
+	private _mondayAPI: MondayKit = new MondayKit();
 
 	constructor(private readonly _telemetry: ITelemetry) { }
 
 	public async initialize(): Promise<MondayKit> {
-		this._mondayAPI = new MondayKit();
 		return this._mondayAPI.init();
 	}
 
 	public async reset() {
 		this._mondayAPI?.setSession(undefined);
-		this._mondayAPI = undefined;
 		await this.initialize();
 	}
 
 	public isAuthenticated(): boolean {
-		return !!this._mondayAPI;
+		return !!this._mondayAPI.isAuthenticated();
 	}
 
-	public getApi(): MondayKit | undefined {
+	public getApi(): MondayKit {
 		return this._mondayAPI;
 	}
 
-	public async getApiOrLogin(): Promise<MondayKit | undefined> {
-		return this._mondayAPI ?? await this.login();
+	public async getApiOrLogin(): Promise<MondayKit> {
+		return this._mondayAPI.isAuthenticated() ? this._mondayAPI : await this.login();
 	}
 
 	public async showSignInNotification(): Promise<MondayKit | undefined> {
@@ -66,7 +64,7 @@ export class CredentialStore {
 		this._mondayAPI?.setSession();
 	}
 
-	public async login(): Promise<MondayKit | undefined> {
+	public async login(): Promise<MondayKit> {
 
 		/* __GDPR__
 			"auth.start" : {}
@@ -74,11 +72,9 @@ export class CredentialStore {
 		this._telemetry.sendTelemetryEvent('auth.start');
 
 		let retry: boolean = true;
-		let monday: MondayKit | undefined = undefined;
-
 		while (retry) {
 			try {
-				monday = await this.initialize();
+				await this.initialize();
 			} catch (e) {
 				Logger.appendLine(`Error signing in to Monday: ${e}`);
 				if (e instanceof Error && e.stack) {
@@ -86,16 +82,14 @@ export class CredentialStore {
 				}
 			}
 
-			if (monday?.sdk) {
+			if (this._mondayAPI.isAuthenticated()) {
 				retry = false;
 			} else {
 				retry = (await vscode.window.showErrorMessage(`Error signing in to Monday`, TRY_AGAIN, CANCEL)) === TRY_AGAIN;
 			}
 		}
 
-		if (monday?.sdk) {
-			this._mondayAPI = monday;
-
+		if (this._mondayAPI.isAuthenticated()) {
 			/* __GDPR__
 				"auth.success" : {}
 			*/
@@ -107,6 +101,6 @@ export class CredentialStore {
 			this._telemetry.sendTelemetryEvent('auth.fail');
 		}
 
-		return monday;
+		return this._mondayAPI;
 	}
 }
