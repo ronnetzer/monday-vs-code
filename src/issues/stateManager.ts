@@ -113,7 +113,7 @@ export class StateManager {
 
 	private async getUsers(): Promise<Map<string, User>> {
 		await this.initializePromise;
-		const assignableUsers = await Promise.all([this.usersManager.getUserTeams(), this.usersManager.getAssignableUsers()])
+		const assignableUsers = await Promise.all([this.usersManager.getUserTeams(), this.usersManager.getEntries()])
 			.then(([teams, users]) => [...teams.map(convertTeamToUser), ...users]);
 		const userMap: Map<string, User> = new Map();
 		for (const user of assignableUsers) {

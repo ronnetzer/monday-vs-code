@@ -18,12 +18,12 @@ import { User, Team } from '../monday/usersManager';
 export const ISSUE_EXPRESSION = /(([^\s]+)\/([^\s]+))?(#|GH-)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
 export const ISSUE_OR_URL_EXPRESSION = /(https?:\/\/github\.com\/(([^\s]+)\/([^\s]+))\/([^\s]+\/)?(issues|pull)\/([0-9]+)(#issuecomment\-([0-9]+))?)|(([^\s]+)\/([^\s]+))?(#|GH-)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
 
-export const USER_EXPRESSION: RegExp = /\@([^\s]+)/;
+export const USER_EXPRESSION: RegExp = /\@([^;]+)/;
 
 export const MAX_LINE_LENGTH = 150;
 
 export type ParsedIssue = { owner: string | undefined, name: string | undefined, issueNumber: number, commentNumber?: number };
-export const ISSUES_CONFIGURATION: string = 'githubIssues';
+export const ISSUES_CONFIGURATION: string = 'mondayExtension';
 export const QUERIES_CONFIGURATION = 'queries';
 export const DEFAULT_QUERY_CONFIGURATION = 'default';
 export const BRANCH_NAME_CONFIGURATION = 'workingIssueBranch';

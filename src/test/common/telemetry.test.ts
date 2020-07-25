@@ -14,7 +14,7 @@ describe('Telemetry', () => {
 
 	it('should migrate deprecated optout setting', async () => {
 		const deprecated = vscode.workspace.getConfiguration('telemetry');
-		const migrated = vscode.workspace.getConfiguration('mondayIntegration.telemetry');
+		const migrated = vscode.workspace.getConfiguration('mondayExtension.telemetry');
 		const target = vscode.ConfigurationTarget.Global;
 
 		// Reset the workspace

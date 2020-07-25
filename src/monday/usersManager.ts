@@ -1,6 +1,7 @@
 import { ITelemetry } from '../common/telemetry';
 import { MondaySDK } from 'monday-sdk-js';
 import { CredentialStore } from './credentials';
+import Logger from '../common/logger';
 
 export interface Team {
 	id: number;
@@ -35,7 +36,7 @@ export class UsersManager {
 	private _sdk: MondaySDK;
 	private _currentUser: Required<User>;
 
-	constructor(private readonly credentialStore: CredentialStore, private readonly _telemetry: ITelemetry) {
+	constructor(private readonly _telemetry: ITelemetry, private readonly credentialStore: CredentialStore) {
 		this._sdk = credentialStore.getApi().sdk;
 	}
 
@@ -58,11 +59,12 @@ export class UsersManager {
 		return this._currentUser || undefined;
 	}
 
-	async getAssignableUsers(): Promise<User[]> {
+	async getEntries(): Promise<User[]> {
 		if (this.credentialStore.isAuthenticated()) {
 			return await this._sdk.api<UserResponse>(this.allUsersPreviewQuery(), '').then(res => {
 				// if we have 0 boards, throw an error.
 				if (!res.data.users.length) {
+					Logger.appendLine('No users found');
 					this._telemetry.sendTelemetryEvent('users.manager.fail');
 					throw new Error('No users found, something is fishy here');
 				}
@@ -93,6 +95,7 @@ export class UsersManager {
 		const userDetails = userDetailsRes.data.users[0];
 
 		if (!userDetails) {
+			Logger.appendLine('Cant get user details');
 			this._telemetry.sendTelemetryEvent('users.manager.fail');
 			return Promise.reject(new Error('Cant get user details'));
 		}
