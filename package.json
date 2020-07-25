@@ -1,6 +1,6 @@
 {
-  "name": "vscode-pull-request-github",
-  "displayName": "Monday VSCode Integration",
+  "name": "monday-vscode-extension",
+  "displayName": "Monday VSCode extension",
   "description": "Manage your Monday items, boards, teams from vscode",
   "icon": "resources/icons/monday-icon.png",
   "repository": {
@@ -12,7 +12,7 @@
   },
   "enableProposedApi": true,
   "preview": true,
-  "version": "0.17.0",
+  "version": "0.0.1",
   "author": {
     "name": "Ron Netzer",
     "email": "ronnetzer@gmail.com"
@@ -20,7 +20,7 @@
   "contributors": [
     "Daniel Netzer daniel.netzer7@gmail.com"
   ],
-  "publisher": "Netzer's",
+  "publisher": "Netzer",
   "engines": {
     "vscode": "^1.47.0"
   },
@@ -51,12 +51,12 @@
       "type": "object",
       "title": "Monday",
       "properties": {
-        "mondayIntegration.telemetry.enabled": {
+        "mondayExtension.telemetry.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable usage data and errors to be sent to a Monday online service"
         },
-        "mondayIntegration.logLevel": {
+        "mondayExtension.logLevel": {
           "type": "string",
           "enum": [
             "info",
@@ -66,7 +66,7 @@
           "default": "info",
           "description": "Logging for GitHub Pull Request extension. The log is emitted to the output channel named as GitHub Pull Request."
         },
-        "mondayIntegration.createIssueTriggers": {
+        "mondayExtension.createIssueTriggers": {
           "type": "array",
           "items": {
             "type": "string",
@@ -82,7 +82,7 @@
           ],
           "description": "Strings that will cause the 'Create issue from comment' code action to show."
         },
-        "mondayIntegration.createInsertFormat": {
+        "mondayExtension.createInsertFormat": {
           "type": "string",
           "enum": [
             "number",
@@ -91,17 +91,17 @@
           "default": "number",
           "description": "Controls whether an issue number (ex. #1234) or a full url (ex. https://github.com/owner/name/issues/1234) is inserted when the Create Issue code action is run."
         },
-        "mondayIntegration.issueCompletions.enabled": {
+        "mondayExtension.issueCompletions.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Controls whether completion suggestions are shown for issues."
         },
-        "mondayIntegration.userCompletions.enabled": {
+        "mondayExtension.userCompletions.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Controls whether completion suggestions are shown for users."
         },
-        "mondayIntegration.ignoreCompletionTrigger": {
+        "mondayExtension.ignoreCompletionTrigger": {
           "type": "array",
           "items": {
             "type": "string",
@@ -112,7 +112,7 @@
           ],
           "description": "Languages that the '#' character should not be used to trigger issue completion suggestions."
         },
-        "mondayIntegration.ignoreUserCompletionTrigger": {
+        "mondayExtension.ignoreUserCompletionTrigger": {
           "type": "array",
           "items": {
             "type": "string",
@@ -125,9 +125,72 @@
         }
       }
     },
-    "viewsContainers": {},
-    "views": {},
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "monday",
+          "title": "monday",
+          "icon": "resources/icons/monday-icon.png"
+        }
+      ]
+    },
+    "views": {
+      "monday": [
+        {
+          "id": "boards",
+          "name": "Boards",
+          "contextualTitle": ""
+        },
+        {
+          "id": "users",
+          "name": "Users",
+          "contextualTitle": ""
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "boards.refresh",
+          "when": "view == boards",
+          "group": "navigation"
+        },
+        {
+          "command": "users.refresh",
+          "when": "view == users",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "boards.setDefault",
+          "when": "view == boards && viewItem == board"
+        }
+      ]
+    },
     "commands": [
+      {
+        "command": "boards.refresh",
+        "title": "Refresh",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "users.refresh",
+        "title": "Refresh",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        },
+        "category": "Monday"
+      },
+      {
+        "command": "boards.setDefault",
+        "title": "Set Default",
+        "category": "Monday"
+      },
       {
         "command": "auth.signout",
         "title": "Sign out",
