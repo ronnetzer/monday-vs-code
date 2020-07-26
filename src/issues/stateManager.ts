@@ -6,14 +6,15 @@
 import * as LRUCache from 'lru-cache';
 import * as vscode from 'vscode';
 import { IssueModel } from '../github/issueModel';
-import { NO_MILESTONE, PullRequestDefaults } from '../github/pullRequestManager';
+import { PullRequestDefaults } from '../github/pullRequestManager';
 import { MilestoneModel } from '../github/milestoneModel';
 import { CredentialStore as MondayCredentialStore } from '../monday/credentials';
-import { ISSUES_CONFIGURATION, BRANCH_CONFIGURATION, QUERIES_CONFIGURATION, DEFAULT_QUERY_CONFIGURATION, variableSubstitution, convertTeamToUser } from './util';
+import { QUERIES_CONFIGURATION, DEFAULT_QUERY_CONFIGURATION, variableSubstitution, convertTeamToUser } from './util';
 import { CurrentIssue } from './currentIssue';
 import { BoardsManager } from '../monday/boardsManager';
-import { UsersManager, User } from '../monday/usersManager';
+import { UsersManager } from '../monday/usersManager';
 import { ITelemetry } from '../common/telemetry';
+import { User } from 'monday-sdk-js';
 
 // TODO: make exclude from date words configurable
 const excludeFromDate: string[] = ['Recovery'];
@@ -42,7 +43,7 @@ const DEFAULT_QUERY_CONFIGURATION_VALUE = [{ label: 'My Issues', query: 'default
 export class StateManager {
 	public readonly resolvedIssues: LRUCache<string, IssueModel> = new LRUCache(50); // 50 seems big enough
 	private _userMap: Promise<Map<string, User>> | undefined;
-	private _issueCollection: Map<string, Promise<MilestoneModel[] | IssueModel[]>> = new Map();
+	private _itemCollection: Map<string, Promise<MilestoneModel[] | IssueModel[]>> = new Map();
 	private _onRefreshCacheNeeded: vscode.EventEmitter<void> = new vscode.EventEmitter();
 	public onRefreshCacheNeeded: vscode.Event<void> = this._onRefreshCacheNeeded.event;
 	private _onDidChangeIssueData: vscode.EventEmitter<void> = new vscode.EventEmitter();
@@ -56,7 +57,7 @@ export class StateManager {
 	private _maxIssueNumber: number = 0;
 
 	get issueCollection(): Map<string, Promise<MilestoneModel[] | IssueModel[]>> {
-		return this._issueCollection;
+		return this._itemCollection;
 	}
 
 	constructor(
@@ -86,12 +87,12 @@ export class StateManager {
 	}
 
 	async refresh(): Promise<void> {
-		return this.setIssueData();
+		return this.setItemData();
 	}
 
 	private async doInitialize() {
 		this.cleanIssueState();
-		await this.setIssueData();
+		await this.setItemData();
 		this.context.subscriptions.push(this.onRefreshCacheNeeded(async () => {
 			await this.refresh();
 		}));
@@ -136,8 +137,8 @@ export class StateManager {
 		return this.usersManager.currentUser.name;
 	}
 
-	private async setIssueData() {
-		this._issueCollection.clear();
+	private async setItemData() {
+		this._itemCollection.clear();
 		let defaults: PullRequestDefaults | undefined;
 		let user: string | undefined;
 		for (const query of this._queries || []) {
@@ -156,7 +157,7 @@ export class StateManager {
 				}
 				items = this.setIssues(await variableSubstitution(query.query, undefined, defaults, user));
 			}
-			this._issueCollection.set(query.label, items);
+			this._itemCollection.set(query.label, items);
 		}
 		// this._maxIssueNumber = await this.manager.getMaxIssue();
 	}

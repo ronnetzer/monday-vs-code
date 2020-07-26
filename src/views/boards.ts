@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { BoardsManager, Board } from '../monday/boardsManager';
+import { BoardsManager } from '../monday/boardsManager';
+import { Board } from 'monday-sdk-js';
 
 export class BoardProvider implements vscode.TreeDataProvider<BoardItem> {
 

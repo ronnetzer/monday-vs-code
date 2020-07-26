@@ -39,7 +39,7 @@
   ],
   "activationEvents": [
     "*",
-    "onFileSystem:newIssue"
+    "onFileSystem:newItem"
   ],
   "extensionDependencies": [
     "vscode.git",
@@ -215,8 +215,8 @@
       },
       {
         "key": "ctrl+s",
-        "command": "issue.createIssueFromFile",
-        "when": "resourceScheme == newIssue && config.files.autoSave != off"
+        "command": "issue.createItemFromFile",
+        "when": "resourceScheme == newItem && config.files.autoSave != off"
       }
     ],
     "colors": [

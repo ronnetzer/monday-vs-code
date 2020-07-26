@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { userMarkdown, USER_EXPRESSION, shouldShowHover } from './util';
 import { ITelemetry } from '../common/telemetry';
-import { UsersManager, UserDetails } from '../monday/usersManager';
+import { UsersManager } from '../monday/usersManager';
 import { StateManager } from './stateManager';
 
 export class UserHoverProvider implements vscode.HoverProvider {

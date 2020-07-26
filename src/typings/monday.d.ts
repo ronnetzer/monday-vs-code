@@ -8,6 +8,77 @@ declare module 'monday-sdk-js' {
       account_id: string;
     }
 
+    export interface Team {
+      id: number;
+      name: string;
+      picture_url: string;
+    }
+
+    export interface UserPreview {
+      id: number;
+      name: string;
+      email: string;
+      isTeam?: boolean;
+    }
+
+    export interface UserDetails {
+      photo_thumb_small?: string;
+      join_date?: Date;
+      url?: string;
+      is_guest?: boolean;
+      title?: string;
+      location?: string;
+      teams?: Team[];
+    }
+
+    export type User =  UserPreview & UserDetails;
+
+    // all / active / archived / deleted
+    export enum State {
+      ACTIVE = 'active',
+      ALL = 'all',
+      ARCHIVED = 'archived',
+      DELETED = 'deleted'
+    }
+
+    //
+    export enum BoardKind {
+      PRIVATE = 'private',
+      PUBLIC = 'public',
+      SHARE = 'share'
+    }
+
+    export interface Board {
+      name: string;
+      id: number;
+      state: State;
+      board_kind: BoardKind;
+    }
+
+    export interface Group {
+      id: number;
+      name: string;
+      deleted: boolean;
+      archived: boolean;
+    }
+
+    export interface Tag {
+      id: number;
+      name: string;
+      color: string;
+    }
+
+    export interface Item {
+      id: number;
+      name: string;
+      color: string;
+      creator_id: string;
+      created_at: string;
+      updated_at: string;
+      group: Group;
+      subscribers: UserPreview[];
+    }
+
 		export interface MondaySDK {
 			setToken: (token: string) => void;
 			api: <T = any>(query: string, options: any) => Promise<MondaySDKResponse<T>>;

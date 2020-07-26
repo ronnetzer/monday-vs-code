@@ -1,34 +1,12 @@
 import * as WorkspaceState from '../common/workspaceState';
 import * as vscode from 'vscode';
 import { ITelemetry } from '../common/telemetry';
-import { MondaySDK } from 'monday-sdk-js';
+import { MondaySDK, Board } from 'monday-sdk-js';
 import Logger from '../common/logger';
 
-// all / active / archived / deleted
-export enum BoardState {
-	ACTIVE = 'active',
-	ALL = 'all',
-	ARCHIVED = 'archived',
-	DELETED = 'deleted'
-}
-
-//
-export enum BoardKind {
-	PRIVATE = 'private',
-	PUBLIC = 'public',
-	SHARE = 'share'
-}
-
-export interface Board {
-	name: string;
-	id: number;
-	state: BoardState;
-	board_kind: BoardKind;
-}
-
-export interface Boards {
+export interface BoardsResponse {
 	boards: Board[];
-}
+  }
 
 export class BoardsManager {
 	boards: Board[];
@@ -36,6 +14,7 @@ export class BoardsManager {
 	constructor(private readonly _telemetry: ITelemetry, private readonly _mondaySDK: MondaySDK) { }
 
 	async init(): Promise<Board> {
+		Logger.appendLine('Init BoardsManager');
 		// TODO: load from api all possible boards, check the state to see if the default board is defined.
 		this._telemetry.sendTelemetryEvent('boards.manager.init');
 		this.setDefaultBoard(WorkspaceState.fetch('monday', 'defaultBoard') as Board);
@@ -63,7 +42,7 @@ export class BoardsManager {
 	public async getEntries() {
 		Logger.appendLine('Fetching boards');
 		const boardsQuery = this.allBoardsQuery();
-		const boardsResponse = await this._mondaySDK.api<Boards>(boardsQuery, '');
+		const boardsResponse = await this._mondaySDK.api<BoardsResponse>(boardsQuery, '');
 		this.boards = boardsResponse.data.boards;
 	}
 

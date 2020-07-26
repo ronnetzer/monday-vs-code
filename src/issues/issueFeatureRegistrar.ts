@@ -155,12 +155,12 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			this.telemetry.sendTelemetryEvent('issue.createIssue');
 			return this.createIssue();
 		}, this));
-		this.context.subscriptions.push(vscode.commands.registerCommand('issue.createIssueFromFile', () => {
+		this.context.subscriptions.push(vscode.commands.registerCommand('issue.createItemFromFile', () => {
 			/* __GDPR__
-				"issue.createIssueFromFile" : {}
+				"issue.createItemFromFile" : {}
 			*/
-			this.telemetry.sendTelemetryEvent('issue.createIssueFromFile');
-			return this.createIssueFromFile();
+			this.telemetry.sendTelemetryEvent('issue.createItemFromFile');
+			return this.createItemFromFile();
 		}, this));
 		this.context.subscriptions.push(vscode.commands.registerCommand('issue.issueCompletion', () => {
 			/* __GDPR__
@@ -232,10 +232,10 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 	}
 
 	async createIssue() {
-		return this.makeNewIssueFile();
+		return this.makeNewItemFile();
 	}
 
-	async createIssueFromFile() {
+	async createItemFromFile() {
 		let text: string;
 		if (!vscode.window.activeTextEditor || (vscode.window.activeTextEditor.document.uri.scheme !== NEW_ISSUE_SCHEME)) {
 			return;
@@ -416,35 +416,35 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			quickInput.busy = true;
 			this.createIssueInfo = { document, newIssue, lineNumber, insertIndex };
 
-			this.makeNewIssueFile(title, body, subscribers);
+			this.makeNewItemFile(title, body, subscribers);
 			quickInput.busy = false;
 			quickInput.hide();
 		});
 		quickInput.show();
 	}
 
-	private async makeNewIssueFile(title?: string, body?: string, assignees?: string[] | undefined) {
+	private async makeNewItemFile(title?: string, body?: string, subscribers?: string[] | undefined) {
 		const bodyPath = vscode.Uri.parse(`${NEW_ISSUE_SCHEME}:/${NEW_ISSUE_FILE}`);
 		if (vscode.window.visibleTextEditors.filter(visibleEditor => visibleEditor.document.uri.scheme === NEW_ISSUE_SCHEME).length > 0) {
 			return;
 		}
 		await vscode.workspace.fs.delete(bodyPath);
-		const assigneeLine = `${SUBSCRIBERS} ${assignees && assignees.length > 0 ? assignees.map(value => '@' + value).join(', ') + ' ' : ''}`;
+		const subscribersLine = `${SUBSCRIBERS} ${subscribers && subscribers.length > 0 ? subscribers.map(value => '@' + value).join(', ') + ' ' : ''}`;
 		const labelLine = `${TAGS} `;
 		const text =
 			`${title ?? 'Issue Title'}\n
-${assigneeLine}
+${subscribersLine}
 ${labelLine}\n
 ${body ?? ''}\n
 <!-- Edit the body of your new issue then click the ✓ \"Create Issue\" button in the top right of the editor. The first line will be the issue title. Assignees and Labels follow after a blank line. Leave an empty line before beginning the body of the issue. -->`;
 		await vscode.workspace.fs.writeFile(bodyPath, this.stringToUint8Array(text));
-		const assigneesDecoration = vscode.window.createTextEditorDecorationType({ after: { contentText: ' Comma-separated usernames, either @username or just username.', fontStyle: 'italic', color: new vscode.ThemeColor('issues.newIssueDecoration') } });
+		const subscribersDecoration = vscode.window.createTextEditorDecorationType({ after: { contentText: ' Comma-separated usernames, either @username or just username.', fontStyle: 'italic', color: new vscode.ThemeColor('issues.newIssueDecoration') } });
 		const labelsDecoration = vscode.window.createTextEditorDecorationType({ after: { contentText: ' Comma-separated labels.', fontStyle: 'italic', color: new vscode.ThemeColor('issues.newIssueDecoration') } });
 		const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor((textEditor => {
 			if (textEditor?.document.uri.scheme === NEW_ISSUE_SCHEME) {
 				const assigneeFullLine = textEditor.document.lineAt(2);
 				if (assigneeFullLine.text.startsWith(SUBSCRIBERS)) {
-					textEditor.setDecorations(assigneesDecoration, [new vscode.Range(new vscode.Position(2, 0), new vscode.Position(2, assigneeFullLine.text.length))]);
+					textEditor.setDecorations(subscribersDecoration, [new vscode.Range(new vscode.Position(2, 0), new vscode.Position(2, assigneeFullLine.text.length))]);
 				}
 				const labelFullLine = textEditor.document.lineAt(3);
 				if (labelFullLine.text.startsWith(TAGS)) {
@@ -460,36 +460,5 @@ ${body ?? ''}\n
 				closeDisposable.dispose();
 			}
 		});
-	}
-
-	private async verifyLabels(createParams: Octokit.IssuesCreateParams): Promise<boolean> {
-		if (!createParams.labels) {
-			return true;
-		}
-		const allTags = (await this.tasksManager.getAllTags()).map(tag => tag.name);
-		const newTags: string[] = [];
-		const filteredTags: string[] = [];
-		createParams.labels?.forEach(label => {
-			if (allTags.includes(label)) {
-				filteredTags.push(label);
-			} else {
-				newTags.push(label);
-			}
-		});
-
-		if (newTags.length > 0) {
-			const yes = 'Yes';
-			const no = 'No';
-			const promptResult = await vscode.window.showInformationMessage(`The following labels don't exist in this repository: ${newTags.join(', ')}. \nDo you want to create these labels?`, { modal: true }, yes, no);
-			switch (promptResult) {
-				case yes: return true;
-				case no: {
-					createParams.labels = filteredTags;
-					return true;
-				}
-				default: return false;
-			}
-		}
-		return true;
 	}
 }

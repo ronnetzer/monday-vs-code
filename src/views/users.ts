@@ -22,11 +22,13 @@ export class UserProvider implements vscode.TreeDataProvider<UserItem> {
 			return Promise.resolve([]);
 		} else {
 			// if no element return the boards list
-			return Promise.resolve(this.usersManager.users.map(user => {
-				// TODO: add context menu that will open monday in the corresponding context,
-				// e.g. Send Email, Add to Team or w/e...
-				return new UserItem(user.name, 0);
-			}));
+			return this.usersManager.getEntries().then(users => {
+				return users.map(user => {
+					// TODO: add context menu that will open monday in the corresponding context,
+					// e.g. Send Email, Add to Team or w/e...
+					return new UserItem(user.name, 0);
+				});
+			});
 		}
 	}
 }

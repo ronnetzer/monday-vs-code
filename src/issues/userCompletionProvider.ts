@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { userMarkdown, ISSUES_CONFIGURATION, UserCompletionItem, isComment } from './util';
 import { StateManager } from './stateManager';
 import { NEW_ISSUE_SCHEME } from './issueFile';
-import { UsersManager, UserDetails } from '../monday/usersManager';
+import { UsersManager } from '../monday/usersManager';
 
 export class UserCompletionProvider implements vscode.CompletionItemProvider {
 	constructor(private stateManager: StateManager, private usersManager: UsersManager, context: vscode.ExtensionContext) {
@@ -50,7 +50,8 @@ export class UserCompletionProvider implements vscode.CompletionItemProvider {
 	}
 
 	async resolveCompletionItem(item: UserCompletionItem, token: vscode.CancellationToken): Promise<vscode.CompletionItem> {
-		const userDetails: UserDetails = await this.usersManager.getUserDetails([item.data.id]);
+		// TODO: get team details if item.data.isTeam
+		const userDetails = item.data.isTeam ? item.data : await this.usersManager.getUserDetails([item.data.id]);
 		if (userDetails) {
 			item.data = { ...item.data, ...userDetails };
 			item.documentation = userMarkdown(item.data);

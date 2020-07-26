@@ -1,46 +1,36 @@
 import { ITelemetry } from '../common/telemetry';
-import { MondaySDK } from 'monday-sdk-js';
-import { CredentialStore } from './credentials';
-import { BoardsManager, Board } from './boardsManager';
-import { access } from 'fs';
+import { MondaySDK, Item, Tag } from 'monday-sdk-js';
+import { BoardsManager } from './boardsManager';
+import Logger from '../common/logger';
 
-export interface Tag {
-	id: number;
-	name: string;
-	color: string;
-}
-
-export interface Task {
-	id: number;
-	name: string;
-}
-
-export interface TaskResponse<T = Task> {
-	tasks: T[];
+export interface ItemResponse<T = Item> {
+	items: T[];
 }
 
 export class ItemsManager {
-	private _sdk: MondaySDK;
-
 	constructor(
-		private readonly credentialStore: CredentialStore,
-		private readonly boardsManager: BoardsManager,
-		private readonly _telemetry: ITelemetry
-	) {
-		this._sdk = this.credentialStore.getApi().sdk;
-	}
+		private readonly _telemetry: ITelemetry,
+		private readonly sdk: MondaySDK,
+		private readonly boardsManager: BoardsManager
+	) {}
 
 	async init(): Promise<Required<void>> {
+		Logger.appendLine('Init ItemsManager');
+
 		this._telemetry.sendTelemetryEvent('tasks.manager.init');
 
 		this._telemetry.sendTelemetryEvent('tasks.manager.success');
 	}
 
+	async getEntries(): Promise<Item[]> {
+		return await this.sdk.api<ItemResponse>(this.ItemsQuery(), '').then(res => res.data.items);
+	}
+
 	async getAllTags(): Promise<Tag[]> {
 		const boardIds = this.boardsManager.boards.map(board => board.id);
 		return Promise.all([
-			this._sdk.api<{ boards: { tags: Tag[]}[] }>(this.boardTagsQuery(boardIds), '').then(res => res.data.boards.reduce((acc, curr) => [ ...acc, ...curr.tags], [])),
-			this._sdk.api<{ tags: Tag[] }>(this.publicTagsQuery(), '').then(res => res.data.tags)
+			this.sdk.api<{ boards: { tags: Tag[]}[] }>(this.boardTagsQuery(boardIds), '').then(res => res.data.boards.reduce((acc, curr) => [ ...acc, ...curr.tags], [])),
+			this.sdk.api<{ tags: Tag[] }>(this.publicTagsQuery(), '').then(res => res.data.tags)
 		]).then(([boardTags, publicTags]) => [ ...boardTags, ...publicTags]);
 	}
 
@@ -56,6 +46,30 @@ export class ItemsManager {
 				id
 				name
 				color
+			}
+		}`;
+	}
+
+	ItemsQuery(): string {
+		return `{
+			items {
+				id
+				name
+				color
+				creator_id
+				created_at
+				updated_at
+				group {
+					id
+					name
+					deleted
+					archived
+				}
+				subscribers {
+					id
+					name
+					email
+				}
 			}
 		}`;
 	}

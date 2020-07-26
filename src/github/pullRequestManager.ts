@@ -27,7 +27,7 @@ import { ApiImpl } from '../api/api1';
 import { Protocol } from '../common/protocol';
 import { IssueModel } from './issueModel';
 import { MilestoneModel } from './milestoneModel';
-import { userMarkdown, UserCompletion } from '../issues/util';
+import { userMarkdown } from '../issues/util';
 
 interface PageInformation {
 	pullRequestPage: number;
@@ -221,7 +221,7 @@ export class PullRequestManager implements vscode.Disposable {
 	private setUpCompletionItemProvider() {
 		let lastPullRequest: PullRequestModel | undefined = undefined;
 		let lastPullRequestTimelineEvents: TimelineEvent[] = [];
-		let cachedUsers: UserCompletion[] = [];
+		let cachedUsers: any[] = [];
 
 		vscode.languages.registerCompletionItemProvider({ scheme: 'comment' }, {
 			provideCompletionItems: async (document, position, token) => {
@@ -385,7 +385,7 @@ export class PullRequestManager implements vscode.Disposable {
 					const repo = await this.getPullRequestDefaults();
 					const user: User | undefined = await this.resolveUser(repo.owner, repo.repo, item.label);
 					if (user) {
-						item.documentation = userMarkdown(repo, user);
+						item.documentation = userMarkdown(user as any);
 					}
 				} catch (e) {
 					// The user might not be resolvable in the repo, since users from outside the repo are included in the list.

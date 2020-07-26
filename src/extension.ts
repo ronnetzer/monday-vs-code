@@ -72,8 +72,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
 	const selectedBoard = await boardsManager.init();
 	// TODO: instantiate BoardsManager(...) @daniel.netzer
 
-	const usersManager = new UsersManager(telemetry, mondayCredentialStore);
+	const usersManager = new UsersManager(telemetry, mondayKit.sdk);
 	await usersManager.init();
+
+	const itemsManager = new ItemsManager(telemetry, mondayKit.sdk, boardsManager);
+	await itemsManager.init();
 
 	// init sidebar (extract to the relevant services?)
 	const boardsProvider = new BoardProvider(boardsManager);
@@ -82,8 +85,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
 	const usersProvider = new UserProvider(usersManager);
 	vscode.window.registerTreeDataProvider('users', usersProvider);
 
-	const tasksManager = new ItemsManager(mondayCredentialStore, boardsManager, telemetry);
-
 	Logger.appendLine(`Found default board: ${selectedBoard}`);
 	// const prTree = new PullRequestsTreeDataProvider(telemetry);
 	// context.subscriptions.push(prTree);
@@ -91,7 +92,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
 	Logger.appendLine(`Found default board: ${selectedBoard.id}`);
 
 	// if (selectedRepository) {
-	await init(context, mondayCredentialStore, boardsManager, usersManager, tasksManager);
+	await init(context, mondayCredentialStore, boardsManager, usersManager, itemsManager);
 	// } else {
 	// 	onceEvent(apiImpl.onDidOpenRepository)(r => init(context, mondayCredentialStore, apiImpl, gitAPI, credentialStore, r, prTree, liveshareApiPromise));
 	// }
