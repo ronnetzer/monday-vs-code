@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { PullRequestManager } from '../github/pullRequestManager';
+import { ItemsManager } from '../monday/ItemsManager';
 
 export const NEW_ISSUE_SCHEME = 'newIssue';
 export const NEW_ISSUE_FILE = 'NewIssue.md';
-export const ASSIGNEES = 'Assignees:';
-export const LABELS = 'Labels:';
+export const SUBSCRIBERS = 'Subscribers:';
+export const TAGS = 'Tags:';
 
 export class IssueFileSystemProvider implements vscode.FileSystemProvider {
 	private content: Uint8Array | undefined;
@@ -61,20 +61,19 @@ export class IssueFileSystemProvider implements vscode.FileSystemProvider {
 	rename(_oldUri: vscode.Uri, _newUri: vscode.Uri, _options: { overwrite: boolean; }): void | Thenable<void> { }
 }
 
-export class LabelCompletionProvider implements vscode.CompletionItemProvider {
+export class TagCompletionProvider implements vscode.CompletionItemProvider {
 
-	constructor(private manager: PullRequestManager) { }
+	constructor(private tasksManager: ItemsManager) { }
 
 	async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): Promise<vscode.CompletionItem[]> {
-		if (!document.lineAt(position.line).text.startsWith(LABELS)) {
+		if (!document.lineAt(position.line).text.startsWith(TAGS)) {
 			return [];
 		}
-		const defaults = await this.manager.getPullRequestDefaults();
-		const labels = await this.manager.getLabels(undefined, defaults);
-		return labels.map(label => {
-			const item = new vscode.CompletionItem(label.name, vscode.CompletionItemKind.Keyword);
+		const tags = await this.tasksManager.getAllTags();
+		return tags.map(tag => {
+			const item = new vscode.CompletionItem(tag.name, vscode.CompletionItemKind.Keyword);
 			item.documentation = new vscode.MarkdownString();
-			item.documentation.appendMarkdown(`<span style="background-color:#${label.color};">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`);
+			item.documentation.appendMarkdown(`<span style="background-color:#${tag.color};">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`);
 			item.documentation.isTrusted = true;
 			return item;
 		});

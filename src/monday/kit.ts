@@ -6,11 +6,6 @@ import * as mondaySdk from 'monday-sdk-js';
 import { parse } from 'url';
 import Logger from '../common/logger';
 
-export interface MondaySDKResponse<T> {
-	data: T;
-	account_id: string;
-}
-
 // access_token	An access token that can be used to make calls to the monday.com API. It is valid for 30 days.
 // token_type	Bearer -- all monday OAuth tokens are bearer token.
 // scope	A space-separated list of scopes that have been granted for this access token.
@@ -48,9 +43,9 @@ export class MondayKit {
 		// is_expired_access_token ? is_expired_refresh_token ? login :
 		// refresh_token -> update session.
 		this.#sdkInstance = mondaySdk();
-		const session = PersistentState.fetch('monday', 'session') as MondaySession;
+		const session = this.getSession();
 
-		if (!session.access_token || this.isExpired(session.refresh_token_expiration_date)) {
+		if (!session || !session.access_token || this.isExpired(session.refresh_token_expiration_date)) {
 			this.setSession(undefined);
 			await this.login();
 		} else if (this.isExpired(session.access_token_expiration_date)) {
@@ -63,21 +58,26 @@ export class MondayKit {
 		return this;
 	}
 
-	get sdk() {
+	get sdk(): mondaySdk.MondaySDK {
 		return this.#sdkInstance;
 	}
 
 	public setSession(session?: MondaySession) {
 		if (session) {
-			this.#sdkInstance.setToken(session.access_token);
+			this.sdk?.setToken(session.access_token);
 			vscode.window.showInformationMessage('Monday VS Code Extension - Logged In! :D');
 		}
 
 		PersistentState.store('monday', 'session', session);
 	}
 
-	public getSession() {
-		return PersistentState.fetch('monday', 'session') as MondaySession | {};
+	public getSession(): MondaySession | undefined {
+		return PersistentState.fetch<MondaySession>('monday', 'session');
+	}
+
+	public isAuthenticated(): boolean {
+		const session = this.getSession();
+		return !!session && !this.isExpired(session.access_token_expiration_date);
 	}
 
 	private async login() {
@@ -155,7 +155,7 @@ export class MondayKit {
 			// if we got refresh token meaning this is inital login and we need
 			// to calculate expiration dates both for access_token and refresh_token
 
-			this.#sdkInstance.setToken(session.access_token);
+			this.sdk?.setToken(session.access_token);
 			const currSession = this.getSession();
 			let newSessionState = { ...currSession, ...session };
 

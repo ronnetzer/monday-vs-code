@@ -3,24 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { PullRequestManager, PullRequestDefaults } from '../github/pullRequestManager';
 import * as vscode from 'vscode';
 import { IssueHoverProvider } from './issueHoverProvider';
 import { UserHoverProvider } from './userHoverProvider';
 import { IssueTodoProvider } from './issueTodoProvider';
 import { IssueCompletionProvider } from './issueCompletionProvider';
-import { NewIssue, createGithubPermalink, USER_EXPRESSION, ISSUES_CONFIGURATION, QUERIES_CONFIGURATION, pushAndCreatePR } from './util';
+import { NewIssue, USER_EXPRESSION, ISSUES_CONFIGURATION } from './util';
 import { UserCompletionProvider } from './userCompletionProvider';
 import { StateManager } from './stateManager';
-import { IssuesTreeData } from './issuesView';
 import { IssueModel } from '../github/issueModel';
 import { CurrentIssue } from './currentIssue';
-import { ReviewManager } from '../view/reviewManager';
-import { GitAPI } from '../typings/git';
 import { Resource } from '../common/resources';
-import { IssueFileSystemProvider, NEW_ISSUE_SCHEME, ASSIGNEES, LABELS, LabelCompletionProvider, NEW_ISSUE_FILE } from './issueFile';
+import { IssueFileSystemProvider, NEW_ISSUE_SCHEME, SUBSCRIBERS, TAGS, TagCompletionProvider, NEW_ISSUE_FILE } from './issueFile';
 import { ITelemetry } from '../common/telemetry';
 import { Octokit } from '@octokit/rest';
+import { BoardsManager } from '../monday/boardsManager';
+import { UsersManager } from '../monday/usersManager';
+import { CredentialStore } from '../monday/credentials';
+import { ItemsManager } from '../monday/ItemsManager';
 
 const ISSUE_COMPLETIONS_CONFIGURATION = 'issueCompletions.enabled';
 const USER_COMPLETIONS_CONFIGURATION = 'userCompletions.enabled';
@@ -29,15 +29,14 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 	private _stateManager: StateManager;
 	private createIssueInfo: { document: vscode.TextDocument, newIssue: NewIssue | undefined, lineNumber: number | undefined, insertIndex: number | undefined } | undefined;
 
-	constructor(private gitAPI: GitAPI, private manager: PullRequestManager, private reviewManager: ReviewManager, private context: vscode.ExtensionContext, private telemetry: ITelemetry) {
-		this._stateManager = new StateManager(gitAPI, this.manager, this.context);
+	constructor(private credentialStore: CredentialStore, private boardsManager: BoardsManager, private usersManager: UsersManager, private tasksManager: ItemsManager, private context: vscode.ExtensionContext, private telemetry: ITelemetry) {
+		this._stateManager = new StateManager(this.credentialStore, this.boardsManager, this.usersManager, this.telemetry, this.context);
 	}
 
 	async initialize() {
 		this.context.subscriptions.push(vscode.workspace.registerFileSystemProvider(NEW_ISSUE_SCHEME, new IssueFileSystemProvider()));
 		this.registerCompletionProviders();
-		this.context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ scheme: NEW_ISSUE_SCHEME }, new LabelCompletionProvider(this.manager), ' ', ','));
-		this.context.subscriptions.push(vscode.window.createTreeView('issues:github', { showCollapseAll: true, treeDataProvider: new IssuesTreeData(this._stateManager, this.manager, this.context) }));
+		this.context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ scheme: NEW_ISSUE_SCHEME }, new TagCompletionProvider(this.tasksManager), ' ', ','));
 		this.context.subscriptions.push(vscode.commands.registerCommand('issue.createIssueFromSelection', (newIssue?: NewIssue, issueBody?: string) => {
 			/* __GDPR__
 				"issue.createIssueFromSelection" : {}
@@ -57,14 +56,16 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 				"issue.copyGithubPermalink" : {}
 			*/
 			this.telemetry.sendTelemetryEvent('issue.copyGithubPermalink');
-			return this.copyPermalink();
+			// TODO: implement copy permalink
+			// return this.copyPermalink();
 		}, this));
 		this.context.subscriptions.push(vscode.commands.registerCommand('issue.openGithubPermalink', () => {
 			/* __GDPR__
 				"issue.openGithubPermalink" : {}
 			*/
 			this.telemetry.sendTelemetryEvent('issue.openGithubPermalink');
-			return this.openPermalink();
+			// TODO: implement open permalink
+			// return this.openPermalink();
 		}, this));
 		this.context.subscriptions.push(vscode.commands.registerCommand('issue.openIssue', (issueModel: any) => {
 			/* __GDPR__
@@ -78,14 +79,18 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 				"issue.startWorking" : {}
 			*/
 			this.telemetry.sendTelemetryEvent('issue.startWorking');
-			return this.startWorking(issue);
+			// TODO: implement start working to task
+			console.log('TODO');
+			// return this.startWorking(issue);
 		}, this));
 		this.context.subscriptions.push(vscode.commands.registerCommand('issue.continueWorking', (issue: any) => {
 			/* __GDPR__
 				"issue.continueWorking" : {}
 			*/
 			this.telemetry.sendTelemetryEvent('issue.continueWorking');
-			return this.startWorking(issue);
+			// TODO: implement continue working to task
+			console.log('TODO');
+			// return this.startWorking(issue);
 		}, this));
 		this.context.subscriptions.push(vscode.commands.registerCommand('issue.startWorkingBranchPrompt', (issueModel: any) => {
 			/* __GDPR__
@@ -143,13 +148,6 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			this.telemetry.sendTelemetryEvent('issue.getCurrent');
 			return this.getCurrent();
 		}, this));
-		this.context.subscriptions.push(vscode.commands.registerCommand('issue.editQuery', (query: vscode.TreeItem) => {
-			/* __GDPR__
-				"issue.editQuery" : {}
-			*/
-			this.telemetry.sendTelemetryEvent('issue.editQuery');
-			return this.editQuery(query);
-		}, this));
 		this.context.subscriptions.push(vscode.commands.registerCommand('issue.createIssue', () => {
 			/* __GDPR__
 				"issue.createIssue" : {}
@@ -176,13 +174,10 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			*/
 			this.telemetry.sendTelemetryEvent('issue.userCompletion');
 		}));
-		this.context.subscriptions.push(vscode.commands.registerCommand('issue.signinAndRefreshList', async () => {
-			return this.manager.authenticate();
-		}));
 		return this._stateManager.tryInitializeAndWait().then(() => {
-			this.context.subscriptions.push(vscode.languages.registerHoverProvider('*', new IssueHoverProvider(this.manager, this._stateManager, this.context, this.telemetry)));
-			this.context.subscriptions.push(vscode.languages.registerHoverProvider('*', new UserHoverProvider(this.manager, this.telemetry)));
-			this.context.subscriptions.push(vscode.languages.registerCodeActionsProvider('*', new IssueTodoProvider(this.context)));
+			// this.context.subscriptions.push(vscode.languages.registerHoverProvider('*', new IssueHoverProvider(this.manager, this._stateManager, this.context, this.telemetry)));
+			this.context.subscriptions.push(vscode.languages.registerHoverProvider('*', new UserHoverProvider(this._stateManager, this.usersManager, this.telemetry)));
+			// this.context.subscriptions.push(vscode.languages.registerCodeActionsProvider('*', new IssueTodoProvider(this.context)));
 		});
 	}
 
@@ -217,7 +212,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		];
 		for (const element of providers) {
 			if (vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get(element.configuration, true)) {
-				this.context.subscriptions.push(element.disposable = vscode.languages.registerCompletionItemProvider(this.documentFilters, new element.provider(this._stateManager, this.manager, this.context), element.trigger));
+				this.context.subscriptions.push(element.disposable = vscode.languages.registerCompletionItemProvider(this.documentFilters, new element.provider(this._stateManager, this.usersManager, this.context), element.trigger));
 			}
 		}
 		this.context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(change => {
@@ -228,7 +223,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 						element.disposable.dispose();
 						element.disposable = undefined;
 					} else if (newValue && !element.disposable) {
-						this.context.subscriptions.push(element.disposable = vscode.languages.registerCompletionItemProvider(this.documentFilters, new element.provider(this._stateManager, this.manager, this.context), element.trigger));
+						this.context.subscriptions.push(element.disposable = vscode.languages.registerCompletionItemProvider(this.documentFilters, new element.provider(this._stateManager, this.usersManager, this.context), element.trigger));
 					}
 					break;
 				}
@@ -261,12 +256,12 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			}
 		}
 		const title = text.substring(0, indexOfEmptyLine);
-		let assignees: string[] | undefined;
+		let subscribers: string[] | undefined;
 		text = text.substring(indexOfEmptyLine + 2).trim();
-		if (text.startsWith(ASSIGNEES)) {
+		if (text.startsWith(SUBSCRIBERS)) {
 			const lines = text.split(/\r\n|\n/, 1);
 			if (lines.length === 1) {
-				assignees = lines[0].substring(ASSIGNEES.length).split(',').map(value => {
+				subscribers = lines[0].substring(SUBSCRIBERS.length).split(',').map(value => {
 					value = value.trim();
 					if (value.startsWith('@')) {
 						value = value.substring(1);
@@ -276,11 +271,11 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 				text = text.substring(lines[0].length).trim();
 			}
 		}
-		let labels: string[] | undefined;
-		if (text.startsWith(LABELS)) {
+		let tags: string[] | undefined;
+		if (text.startsWith(TAGS)) {
 			const lines = text.split(/\r\n|\n/, 1);
 			if (lines.length === 1) {
-				labels = lines[0].substring(LABELS.length).split(',').map(value => value.trim());
+				tags = lines[0].substring(TAGS.length).split(',').map(value => value.trim());
 				text = text.substring(lines[0].length).trim();
 			}
 		}
@@ -288,36 +283,11 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		if (!title || !body) {
 			return;
 		}
-		const createSucceeded = await this.doCreateIssue(this.createIssueInfo?.document, this.createIssueInfo?.newIssue, title, body, assignees, labels, this.createIssueInfo?.lineNumber, this.createIssueInfo?.insertIndex);
+		// TODO: implement create item flow
+		const createSucceeded = true /* await this.doCreateIssue(this.createIssueInfo?.document, this.createIssueInfo?.newIssue, title, body, subscribers, tags, this.createIssueInfo?.lineNumber, this.createIssueInfo?.insertIndex) */;
 		this.createIssueInfo = undefined;
 		if (createSucceeded) {
 			await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-		}
-	}
-
-	async editQuery(query: vscode.TreeItem) {
-		const config = vscode.workspace.getConfiguration(ISSUES_CONFIGURATION);
-		const inspect = config.inspect<{ label: string, query: string }[]>(QUERIES_CONFIGURATION);
-		let command: string;
-		if (inspect?.workspaceValue) {
-			command = 'workbench.action.openWorkspaceSettingsFile';
-		} else {
-			const value = config.get<{ label: string, query: string }[]>(QUERIES_CONFIGURATION);
-			if (inspect?.defaultValue && JSON.stringify(inspect?.defaultValue) === JSON.stringify(value)) {
-				config.update(QUERIES_CONFIGURATION, inspect.defaultValue, vscode.ConfigurationTarget.Global);
-			}
-			command = 'workbench.action.openSettingsJson';
-		}
-		await vscode.commands.executeCommand(command);
-		const editor = vscode.window.activeTextEditor;
-		if (editor) {
-			const text = editor.document.getText();
-			const search = text.search(query.label!);
-			if (search >= 0) {
-				const position = editor.document.positionAt(search);
-				editor.revealRange(new vscode.Range(position, position));
-				editor.selection = new vscode.Selection(position, position);
-			}
 		}
 	}
 
@@ -343,23 +313,9 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		}
 	}
 
-	async startWorking(issue: any) {
-		let issueModel: IssueModel | undefined;
-
-		if (issue instanceof IssueModel) {
-			issueModel = issue;
-		} else if (issue && issue.repo && issue.owner && issue.number) {
-			issueModel = await this.manager.resolveIssue(issue.owner, issue.repo, issue.number);
-		}
-
-		if (issueModel) {
-			await this._stateManager.setCurrentIssue(new CurrentIssue(issueModel, this.manager, this._stateManager));
-		}
-	}
-
 	async startWorkingBranchPrompt(issueModel: any) {
 		if (issueModel instanceof IssueModel) {
-			await this._stateManager.setCurrentIssue(new CurrentIssue(issueModel, this.manager, this._stateManager, true));
+			await this._stateManager.setCurrentIssue(new CurrentIssue(issueModel, this._stateManager, true));
 		}
 	}
 
@@ -374,19 +330,11 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			const openIssueText: string = `$(globe) Open #${this._stateManager.currentIssue.issue.number} ${this._stateManager.currentIssue.issue.title}`;
 			const pullRequestText: string = `$(git-pull-request) Create pull request for #${this._stateManager.currentIssue.issue.number} (pushes branch)`;
 			const draftPullRequestText: string = `$(comment-discussion) Create draft pull request for #${this._stateManager.currentIssue.issue.number} (pushes branch)`;
-			let defaults: PullRequestDefaults | undefined;
-			try {
-				defaults = await this.manager.getPullRequestDefaults();
-			} catch (e) {
-				// leave defaults undefined
-			}
 			const stopWorkingText: string = `$(primitive-square) Stop working on #${this._stateManager.currentIssue.issue.number}`;
-			const choices = this._stateManager.currentIssue.branchName && defaults ? [openIssueText, pullRequestText, draftPullRequestText, stopWorkingText] : [openIssueText, pullRequestText, draftPullRequestText, stopWorkingText];
+			const choices = [openIssueText, pullRequestText, draftPullRequestText, stopWorkingText];
 			const response: string | undefined = await vscode.window.showQuickPick(choices, { placeHolder: 'Current issue options' });
 			switch (response) {
 				case openIssueText: return this.openIssue(this._stateManager.currentIssue.issue);
-				case pullRequestText: return pushAndCreatePR(this.manager, this.reviewManager, this._stateManager);
-				case draftPullRequestText: return pushAndCreatePR(this.manager, this.reviewManager, this._stateManager, true);
 				case stopWorkingText: return this._stateManager.setCurrentIssue(undefined);
 			}
 		}
@@ -418,7 +366,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		let titlePlaceholder: string | undefined;
 		let insertIndex: number | undefined;
 		let lineNumber: number | undefined;
-		let assignee: string[] | undefined;
+		let subscribers: string[] | undefined;
 		let issueGenerationText: string | undefined;
 		if (!newIssue && vscode.window.activeTextEditor) {
 			document = vscode.window.activeTextEditor.document;
@@ -434,10 +382,10 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		}
 		const matches = issueGenerationText.match(USER_EXPRESSION);
 		if (matches && matches.length === 2 && (await this._stateManager.userMap).has(matches[1])) {
-			assignee = [matches[1]];
+			subscribers = [matches[1]];
 		}
 		let title: string | undefined;
-		const body: string | undefined = issueBody || newIssue?.document.isUntitled ? issueBody : (await createGithubPermalink(this.gitAPI, newIssue)).permalink;
+		const body: string | undefined = issueBody || '';
 
 		const quickInput = vscode.window.createInputBox();
 		quickInput.value = titlePlaceholder ?? '';
@@ -456,7 +404,9 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			title = quickInput.value;
 			if (title) {
 				quickInput.busy = true;
-				await this.doCreateIssue(document, newIssue, title, body, assignee, undefined, lineNumber, insertIndex);
+				// TODO: implement create item flow
+				// await this.doCreateIssue(document, newIssue, title, body, assignee, undefined, lineNumber, insertIndex);
+				console.log('TODO: implement create item flow');
 				quickInput.busy = false;
 			}
 			quickInput.hide();
@@ -466,7 +416,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			quickInput.busy = true;
 			this.createIssueInfo = { document, newIssue, lineNumber, insertIndex };
 
-			this.makeNewIssueFile(title, body, assignee);
+			this.makeNewIssueFile(title, body, subscribers);
 			quickInput.busy = false;
 			quickInput.hide();
 		});
@@ -479,8 +429,8 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			return;
 		}
 		await vscode.workspace.fs.delete(bodyPath);
-		const assigneeLine = `${ASSIGNEES} ${assignees && assignees.length > 0 ? assignees.map(value => '@' + value).join(', ') + ' ' : ''}`;
-		const labelLine = `${LABELS} `;
+		const assigneeLine = `${SUBSCRIBERS} ${assignees && assignees.length > 0 ? assignees.map(value => '@' + value).join(', ') + ' ' : ''}`;
+		const labelLine = `${TAGS} `;
 		const text =
 			`${title ?? 'Issue Title'}\n
 ${assigneeLine}
@@ -493,11 +443,11 @@ ${body ?? ''}\n
 		const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor((textEditor => {
 			if (textEditor?.document.uri.scheme === NEW_ISSUE_SCHEME) {
 				const assigneeFullLine = textEditor.document.lineAt(2);
-				if (assigneeFullLine.text.startsWith(ASSIGNEES)) {
+				if (assigneeFullLine.text.startsWith(SUBSCRIBERS)) {
 					textEditor.setDecorations(assigneesDecoration, [new vscode.Range(new vscode.Position(2, 0), new vscode.Position(2, assigneeFullLine.text.length))]);
 				}
 				const labelFullLine = textEditor.document.lineAt(3);
-				if (labelFullLine.text.startsWith(LABELS)) {
+				if (labelFullLine.text.startsWith(TAGS)) {
 					textEditor.setDecorations(labelsDecoration, [new vscode.Range(new vscode.Position(3, 0), new vscode.Position(3, labelFullLine.text.length))]);
 				}
 			}
@@ -516,97 +466,30 @@ ${body ?? ''}\n
 		if (!createParams.labels) {
 			return true;
 		}
-		const allLabels = (await this.manager.getLabels(undefined, createParams)).map(label => label.name);
-		const newLabels: string[] = [];
-		const filteredLabels: string[] = [];
+		const allTags = (await this.tasksManager.getAllTags()).map(tag => tag.name);
+		const newTags: string[] = [];
+		const filteredTags: string[] = [];
 		createParams.labels?.forEach(label => {
-			if (allLabels.includes(label)) {
-				filteredLabels.push(label);
+			if (allTags.includes(label)) {
+				filteredTags.push(label);
 			} else {
-				newLabels.push(label);
+				newTags.push(label);
 			}
 		});
 
-		if (newLabels.length > 0) {
+		if (newTags.length > 0) {
 			const yes = 'Yes';
 			const no = 'No';
-			const promptResult = await vscode.window.showInformationMessage(`The following labels don't exist in this repository: ${newLabels.join(', ')}. \nDo you want to create these labels?`, { modal: true }, yes, no);
+			const promptResult = await vscode.window.showInformationMessage(`The following labels don't exist in this repository: ${newTags.join(', ')}. \nDo you want to create these labels?`, { modal: true }, yes, no);
 			switch (promptResult) {
 				case yes: return true;
 				case no: {
-					createParams.labels = filteredLabels;
+					createParams.labels = filteredTags;
 					return true;
 				}
 				default: return false;
 			}
 		}
 		return true;
-	}
-
-	private async doCreateIssue(document: vscode.TextDocument | undefined, newIssue: NewIssue | undefined, title: string, issueBody: string | undefined, assignees: string[] | undefined,
-		labels: string[] | undefined, lineNumber: number | undefined, insertIndex: number | undefined): Promise<boolean> {
-		let origin: PullRequestDefaults | undefined;
-		try {
-			origin = await this.manager.getPullRequestDefaults();
-		} catch (e) {
-			// There is no remote
-			vscode.window.showErrorMessage('There is no remote. Can\'t create an issue.');
-			return false;
-		}
-		const body: string | undefined = issueBody || newIssue?.document.isUntitled ? issueBody : (await createGithubPermalink(this.gitAPI, newIssue)).permalink;
-		const createParams: Octokit.IssuesCreateParams = {
-			owner: origin.owner,
-			repo: origin.repo,
-			title,
-			body,
-			assignees,
-			labels
-		};
-		if (!(await this.verifyLabels(createParams))) {
-			return false;
-		}
-		const issue = await this.manager.createIssue(createParams);
-		if (issue) {
-			if ((document !== undefined) && (insertIndex !== undefined) && (lineNumber !== undefined)) {
-				const edit: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
-				const insertText: string = vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get('createInsertFormat', 'number') === 'number' ? `#${issue.number}` : issue.html_url;
-				edit.insert(document.uri, new vscode.Position(lineNumber, insertIndex), ` ${insertText}`);
-				await vscode.workspace.applyEdit(edit);
-			} else {
-				const copyIssueUrl = 'Copy URL';
-				const openIssue = 'Open Issue';
-				vscode.window.showInformationMessage('Issue created', copyIssueUrl, openIssue).then(async (result) => {
-					switch (result) {
-						case copyIssueUrl: await vscode.env.clipboard.writeText(issue.html_url); break;
-						case openIssue: await vscode.env.openExternal(vscode.Uri.parse(issue.html_url)); break;
-					}
-				});
-			}
-			this._stateManager.refreshCacheNeeded();
-			return true;
-		}
-		return false;
-	}
-
-	private async getPermalinkWithError(): Promise<string | undefined> {
-		const link = await createGithubPermalink(this.gitAPI);
-		if (link.error) {
-			vscode.window.showWarningMessage(`Unable to create a GitHub permalink for the selection. ${link.error}`);
-		}
-		return link.permalink;
-	}
-
-	async copyPermalink() {
-		const link = await this.getPermalinkWithError();
-		if (link) {
-			vscode.env.clipboard.writeText(link);
-		}
-	}
-
-	async openPermalink() {
-		const link = await this.getPermalinkWithError();
-		if (link) {
-			vscode.env.openExternal(vscode.Uri.parse(link));
-		}
 	}
 }

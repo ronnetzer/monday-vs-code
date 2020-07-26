@@ -9,13 +9,13 @@ export type GlobalStateContext = { globalState: vscode.Memento };
 
 let defaultStorage: vscode.Memento | undefined = undefined;
 
-export const MISSING = {} as const;
+export const MISSING = undefined;
 
 export function init(ctx: GlobalStateContext) {
 	defaultStorage = ctx.globalState;
 }
 
-export const fetch = (scope: string, key: string): unknown => {
+export const fetch = <R = any>(scope: string, key: string): R | typeof MISSING => {
 	if (!defaultStorage) {
 		throw new Error('Persistent store not initialized.');
 	}

@@ -18,8 +18,10 @@ import { CredentialStore as MondayCredentialStore } from './monday/credentials';
 import { MondayKit } from './monday/kit';
 import { BoardsManager } from './monday/boardsManager';
 import { UsersManager } from './monday/usersManager';
+import { ItemsManager } from './monday/ItemsManager';
 import { BoardProvider } from './views/boards';
 import { UserProvider } from './views/users';
+import { IssueFeatureRegistrar } from './issues/issueFeatureRegistrar';
 
 const aiKey: string = '5f5c7e72-c998-4afe-ac9b-4bf9b25ace98';
 
@@ -31,21 +33,15 @@ fetch.Promise = PolyfillPromise;
 let telemetry: TelemetryReporter;
 let mondayKit: MondayKit;
 
-async function init(context: vscode.ExtensionContext, mondayCredentialStore: MondayCredentialStore, boardsManager: BoardsManager): Promise<void> {
+async function init(context: vscode.ExtensionContext, mondayCredentialStore: MondayCredentialStore, boardsManager: BoardsManager, usersManager: UsersManager, tasksManager: ItemsManager): Promise<void> {
 	context.subscriptions.push(Logger);
 	Logger.appendLine('Monday board found, initializing items manager & users manager');
 
 	context.subscriptions.push(vscode.window.registerUriHandler(uriHandler));
 
-	const usersManager = new UsersManager(telemetry, mondayKit.sdk);
-	await usersManager.init();
-
-	// init sidebar (extract to the relevant services?)
-	const boardsProvider = new BoardProvider(boardsManager);
-	vscode.window.registerTreeDataProvider('boards', boardsProvider);
-
-	const usersProvider = new UserProvider(usersManager);
-	vscode.window.registerTreeDataProvider('users', usersProvider);
+	const issuesFeatures = new IssueFeatureRegistrar(mondayCredentialStore, boardsManager, usersManager, tasksManager, context, telemetry);
+	context.subscriptions.push(issuesFeatures);
+	await issuesFeatures.initialize();
 
 	registerCommands(context, telemetry, mondayCredentialStore, boardsManager, usersManager);
 
@@ -74,10 +70,31 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
 
 	const boardsManager = new BoardsManager(telemetry, mondayKit.sdk);
 	const selectedBoard = await boardsManager.init();
+	// TODO: instantiate BoardsManager(...) @daniel.netzer
+
+	const usersManager = new UsersManager(telemetry, mondayCredentialStore);
+	await usersManager.init();
+
+	// init sidebar (extract to the relevant services?)
+	const boardsProvider = new BoardProvider(boardsManager);
+	vscode.window.registerTreeDataProvider('boards', boardsProvider);
+
+	const usersProvider = new UserProvider(usersManager);
+	vscode.window.registerTreeDataProvider('users', usersProvider);
+
+	const tasksManager = new ItemsManager(mondayCredentialStore, boardsManager, telemetry);
+
+	Logger.appendLine(`Found default board: ${selectedBoard}`);
+	// const prTree = new PullRequestsTreeDataProvider(telemetry);
+	// context.subscriptions.push(prTree);
 
 	Logger.appendLine(`Found default board: ${selectedBoard.id}`);
 
-	await init(context, mondayCredentialStore, boardsManager);
+	// if (selectedRepository) {
+	await init(context, mondayCredentialStore, boardsManager, usersManager, tasksManager);
+	// } else {
+	// 	onceEvent(apiImpl.onDidOpenRepository)(r => init(context, mondayCredentialStore, apiImpl, gitAPI, credentialStore, r, prTree, liveshareApiPromise));
+	// }
 
 	return mondayCredentialStore.getApi();
 }

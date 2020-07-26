@@ -1,52 +1,150 @@
 import { ITelemetry } from '../common/telemetry';
 import { MondaySDK } from 'monday-sdk-js';
-import { MondaySDKResponse } from './kit';
+import { CredentialStore } from './credentials';
+import Logger from '../common/logger';
 
-export interface User {
+export interface Team {
 	id: number;
 	name: string;
-	photo_thumb_small: string;
-	title: string;
-	url: string;
+	picture_url: string;
 }
 
-export interface Users {
-	users: User[];
+export interface UserPreview {
+	id: number;
+	name: string;
+	email: string;
+	isTeam?: boolean;
+}
+
+export interface UserDetails {
+	photo_thumb_small?: string;
+	join_date?: Date;
+	url?: string;
+	is_guest?: boolean;
+	title?: string;
+	location?: string;
+	teams?: Team[];
+}
+
+export type User =  UserPreview & UserDetails;
+
+export interface UserResponse<T = UserPreview> {
+	users: T[];
 }
 
 export class UsersManager {
-	users: User[];
-	constructor(private readonly _telemetry: ITelemetry, private readonly _mondaySDK: MondaySDK) { }
+	private _sdk: MondaySDK;
+	private _currentUser: Required<User>;
 
-	async init(): Promise<void> {
+	constructor(private readonly _telemetry: ITelemetry, private readonly credentialStore: CredentialStore) {
+		this._sdk = credentialStore.getApi().sdk;
+	}
+
+	async init(): Promise<Required<User>> {
 		// TODO: load from api all possible boards, check the state to see if the default board is defined.
 		this._telemetry.sendTelemetryEvent('users.manager.init');
 
-		await this.getEntries();
-
-		// if we have 0 boards, throw an error.
-		if (this.users.length <= 0) {
-			this._telemetry.sendTelemetryEvent('users.manager.fail');
-			throw new Error('No users found, something is fishy here');
+		if (!this.credentialStore.isAuthenticated()) {
+			this._telemetry.sendTelemetryEvent('users.manager.error');
+			return Promise.reject(new Error('Unauthorized'));
 		}
 
-		this._telemetry.sendTelemetryEvent('users.manager.success');
+		this._currentUser = await this.getCurrentUser();
+		this._telemetry.sendTelemetryEvent('users.manager.success', { currentUser: this._currentUser.name });
+
+		return this._currentUser;
 	}
 
-	public async getEntries() {
-		const boardsQuery = this.allNonGuestUsersQuery();
-		const usersResponse = await this._mondaySDK.api(boardsQuery, '') as MondaySDKResponse<Users>;
-		this.users = usersResponse.data.users;
+	get currentUser(): Required<User> {
+		return this._currentUser || undefined;
 	}
 
-	private allNonGuestUsersQuery() {
+	async getEntries(): Promise<User[]> {
+		if (this.credentialStore.isAuthenticated()) {
+			return await this._sdk.api<UserResponse>(this.allUsersPreviewQuery(), '').then(res => {
+				// if we have 0 boards, throw an error.
+				if (!res.data.users.length) {
+					Logger.appendLine('No users found');
+					this._telemetry.sendTelemetryEvent('users.manager.fail');
+					throw new Error('No users found, something is fishy here');
+				}
+
+				return res.data.users;
+			});
+		}
+
+		return Promise.resolve([]);
+	}
+
+	async getUserTeams(): Promise<Team[]> {
+		if (this.credentialStore.isAuthenticated()) {
+			return Promise.resolve(this.currentUser.teams);
+		}
+
+		return Promise.resolve([]);
+	}
+
+	private async getCurrentUser(): Promise<Required<User>> {
+		const currentUserRes = await this._sdk.api<{ me: Required<User> }>(this.currentUserQuery(), '');
+		return currentUserRes.data.me;
+	}
+
+	async getUserDetails(ids: number[]): Promise<UserDetails> {
+		const userDetailsQuery = this.userDetailsQuery(ids);
+		const userDetailsRes = await this._sdk.api<UserResponse<UserDetails>>(userDetailsQuery, '');
+		const userDetails = userDetailsRes.data.users[0];
+
+		if (!userDetails) {
+			Logger.appendLine('Cant get user details');
+			this._telemetry.sendTelemetryEvent('users.manager.fail');
+			return Promise.reject(new Error('Cant get user details'));
+		}
+
+		return userDetails;
+	}
+
+	private allUsersPreviewQuery() {
 		return `{
-			users(kind: non_guests) {
+			users {
 				id
 				name
+				email
+			}
+		}`;
+	}
+
+	private currentUserQuery() {
+		return `{
+			me {
+				id
+				name
+				email
+				join_date
+				photo_thumb_small
+				title
+				teams {
+					id
+					name
+					picture_url
+				}
+				url
+				is_guest
+			}
+		}`;
+	}
+
+	private userDetailsQuery(ids: number[]) {
+		return `{
+			users(ids: [${ids.join(', ')}]) {
+				join_date
 				photo_thumb_small
 				title
 				url
+				teams {
+					id
+					name
+				}
+				is_guest
 			}
 		}`;
 	}
