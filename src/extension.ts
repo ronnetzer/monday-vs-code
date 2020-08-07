@@ -33,13 +33,13 @@ fetch.Promise = PolyfillPromise;
 let telemetry: TelemetryReporter;
 let mondayKit: MondayKit;
 
-async function init(context: vscode.ExtensionContext, mondayCredentialStore: MondayCredentialStore, boardsManager: BoardsManager, usersManager: UsersManager, tasksManager: ItemsManager): Promise<void> {
+async function init(context: vscode.ExtensionContext, mondayCredentialStore: MondayCredentialStore, boardsManager: BoardsManager, usersManager: UsersManager, itemsManager: ItemsManager): Promise<void> {
 	context.subscriptions.push(Logger);
 	Logger.appendLine('Monday board found, initializing items manager & users manager');
 
 	context.subscriptions.push(vscode.window.registerUriHandler(uriHandler));
 
-	const issuesFeatures = new IssueFeatureRegistrar(mondayCredentialStore, boardsManager, usersManager, tasksManager, context, telemetry);
+	const issuesFeatures = new IssueFeatureRegistrar(mondayCredentialStore, boardsManager, usersManager, itemsManager, context, telemetry);
 	context.subscriptions.push(issuesFeatures);
 	await issuesFeatures.initialize();
 

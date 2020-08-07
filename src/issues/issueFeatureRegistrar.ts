@@ -16,7 +16,6 @@ import { CurrentIssue } from './currentIssue';
 import { Resource } from '../common/resources';
 import { IssueFileSystemProvider, NEW_ISSUE_SCHEME, SUBSCRIBERS, TAGS, TagCompletionProvider, NEW_ISSUE_FILE } from './issueFile';
 import { ITelemetry } from '../common/telemetry';
-import { Octokit } from '@octokit/rest';
 import { BoardsManager } from '../monday/boardsManager';
 import { UsersManager } from '../monday/usersManager';
 import { CredentialStore } from '../monday/credentials';
@@ -29,14 +28,14 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 	private _stateManager: StateManager;
 	private createIssueInfo: { document: vscode.TextDocument, newIssue: NewIssue | undefined, lineNumber: number | undefined, insertIndex: number | undefined } | undefined;
 
-	constructor(private credentialStore: CredentialStore, private boardsManager: BoardsManager, private usersManager: UsersManager, private tasksManager: ItemsManager, private context: vscode.ExtensionContext, private telemetry: ITelemetry) {
+	constructor(private credentialStore: CredentialStore, private boardsManager: BoardsManager, private usersManager: UsersManager, private itemsManager: ItemsManager, private context: vscode.ExtensionContext, private telemetry: ITelemetry) {
 		this._stateManager = new StateManager(this.credentialStore, this.boardsManager, this.usersManager, this.telemetry, this.context);
 	}
 
 	async initialize() {
 		this.context.subscriptions.push(vscode.workspace.registerFileSystemProvider(NEW_ISSUE_SCHEME, new IssueFileSystemProvider()));
 		this.registerCompletionProviders();
-		this.context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ scheme: NEW_ISSUE_SCHEME }, new TagCompletionProvider(this.tasksManager), ' ', ','));
+		this.context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ scheme: NEW_ISSUE_SCHEME }, new TagCompletionProvider(this.itemsManager), ' ', ','));
 		this.context.subscriptions.push(vscode.commands.registerCommand('issue.createIssueFromSelection', (newIssue?: NewIssue, issueBody?: string) => {
 			/* __GDPR__
 				"issue.createIssueFromSelection" : {}
@@ -175,9 +174,9 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			this.telemetry.sendTelemetryEvent('issue.userCompletion');
 		}));
 		return this._stateManager.tryInitializeAndWait().then(() => {
-			// this.context.subscriptions.push(vscode.languages.registerHoverProvider('*', new IssueHoverProvider(this.manager, this._stateManager, this.context, this.telemetry)));
+			// this.context.subscriptions.push(vscode.languages.registerHoverProvider('*', new IssueHoverProvider(this._stateManager, this.context, this.telemetry)));
 			this.context.subscriptions.push(vscode.languages.registerHoverProvider('*', new UserHoverProvider(this._stateManager, this.usersManager, this.telemetry)));
-			// this.context.subscriptions.push(vscode.languages.registerCodeActionsProvider('*', new IssueTodoProvider(this.context)));
+			this.context.subscriptions.push(vscode.languages.registerCodeActionsProvider('*', new IssueTodoProvider(this.context)));
 		});
 	}
 
@@ -240,6 +239,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		if (!vscode.window.activeTextEditor || (vscode.window.activeTextEditor.document.uri.scheme !== NEW_ISSUE_SCHEME)) {
 			return;
 		}
+
 		text = vscode.window.activeTextEditor.document.getText();
 		const indexOfEmptyLineWindows = text.indexOf('\r\n\r\n');
 		const indexOfEmptyLineOther = text.indexOf('\n\n');
@@ -283,8 +283,10 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		if (!title || !body) {
 			return;
 		}
+
 		// TODO: implement create item flow
-		const createSucceeded = true /* await this.doCreateIssue(this.createIssueInfo?.document, this.createIssueInfo?.newIssue, title, body, subscribers, tags, this.createIssueInfo?.lineNumber, this.createIssueInfo?.insertIndex) */;
+		const createSucceeded = true;
+		await this.doCreateIssue(this.createIssueInfo?.document, this.createIssueInfo?.newIssue, title, body, subscribers, tags, this.createIssueInfo?.lineNumber, this.createIssueInfo?.insertIndex);
 		this.createIssueInfo = undefined;
 		if (createSucceeded) {
 			await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
@@ -366,7 +368,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		let titlePlaceholder: string | undefined;
 		let insertIndex: number | undefined;
 		let lineNumber: number | undefined;
-		let subscribers: string[] | undefined;
+		let subscribers: string[] = [];
 		let issueGenerationText: string | undefined;
 		if (!newIssue && vscode.window.activeTextEditor) {
 			document = vscode.window.activeTextEditor.document;
@@ -384,43 +386,88 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		if (matches && matches.length === 2 && (await this._stateManager.userMap).has(matches[1])) {
 			subscribers = [matches[1]];
 		}
+
+		let tags: string[] | undefined;
+		if (issueGenerationText.startsWith(TAGS)) {
+			const lines = issueGenerationText.split(/\r\n|\n/, 1);
+			if (lines.length === 1) {
+				tags = lines[0].substring(TAGS.length).split(',').map(value => value.trim());
+			}
+		}
+
 		let title: string | undefined;
 		const body: string | undefined = issueBody || '';
 
 		const quickInput = vscode.window.createInputBox();
 		quickInput.value = titlePlaceholder ?? '';
-		quickInput.prompt = 'Set the issue title. Confirm to create the issue now or use the edit button to edit the issue title and description.';
-		quickInput.title = 'Create Issue';
-		quickInput.buttons = [
-			{
-				iconPath: {
-					light: Resource.icons.light.Edit,
-					dark: Resource.icons.dark.Edit
-				},
-				tooltip: 'Edit Description'
-			}
-		];
+		quickInput.prompt = 'Set the item title. Confirm to create the item now or use the edit button to edit the issue title and description.';
+		quickInput.title = 'Create Item';
+		// quickInput.buttons = [
+		// 	{
+		// 		iconPath: {
+		// 			light: Resource.icons.light.Edit,
+		// 			dark: Resource.icons.dark.Edit
+		// 		},
+		// 		tooltip: 'Edit Description'
+		// 	}
+		// ];
 		quickInput.onDidAccept(async () => {
 			title = quickInput.value;
 			if (title) {
 				quickInput.busy = true;
-				// TODO: implement create item flow
-				// await this.doCreateIssue(document, newIssue, title, body, assignee, undefined, lineNumber, insertIndex);
-				console.log('TODO: implement create item flow');
+				await this.doCreateIssue(document, newIssue, title, undefined, subscribers, tags, lineNumber, insertIndex);
 				quickInput.busy = false;
 			}
 			quickInput.hide();
 		});
-		quickInput.onDidTriggerButton(async () => {
-			title = quickInput.value;
-			quickInput.busy = true;
-			this.createIssueInfo = { document, newIssue, lineNumber, insertIndex };
 
-			this.makeNewItemFile(title, body, subscribers);
-			quickInput.busy = false;
-			quickInput.hide();
-		});
+		// TODO: adjust file format and parsing to fit monday.com format
+		// quickInput.onDidTriggerButton(async () => {
+		// 	title = quickInput.value;
+		// 	quickInput.busy = true;
+		// 	this.createIssueInfo = { document, newIssue, lineNumber, insertIndex };
+
+		// 	this.makeNewItemFile(title, body, subscribers);
+		// 	quickInput.busy = false;
+		// 	quickInput.hide();
+		// });
 		quickInput.show();
+	}
+
+	private async doCreateIssue(document: vscode.TextDocument | undefined, newIssue: NewIssue | undefined, title: string, body: string | undefined, subscribers: string[] | undefined,
+		tags: string[] | undefined, lineNumber: number | undefined, insertIndex: number | undefined): Promise<boolean> {
+
+		// create issue
+		const issue = await this.itemsManager.createItem(title);
+
+		// TODO: add tags to issue if exist
+		// TODO: add subscribers to Person column if exist
+		// TODO: add in the ticket body the file location and the line.
+
+		const account_name_url = this.usersManager.currentUser.account.name.toLowerCase().replace(' ', '-');
+		const html_url = `https://${account_name_url}.monday.com/boards/${issue.board.id}/pulses/${issue.id}`;
+
+		if (issue) {
+			if ((document !== undefined) && (insertIndex !== undefined) && (lineNumber !== undefined)) {
+				const edit: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
+				const issueReference: string = vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get('createInsertFormat', 'number') === 'number' ? `#${issue.id}` : html_url;
+				edit.insert(document.uri, new vscode.Position(lineNumber, insertIndex), ` ${title}, ${issueReference}`);
+				await vscode.workspace.applyEdit(edit);
+			} else {
+				const copyIssueUrl = 'Copy URL';
+				const openIssue = 'Open Item';
+				vscode.window.showInformationMessage('Item created', copyIssueUrl, openIssue).then(async (result) => {
+					switch (result) {
+						case copyIssueUrl: await vscode.env.clipboard.writeText(html_url); break;
+						case openIssue: await vscode.env.openExternal(vscode.Uri.parse(html_url)); break;
+					}
+				});
+			}
+			this._stateManager.refreshCacheNeeded();
+			return true;
+		}
+
+		return false;
 	}
 
 	private async makeNewItemFile(title?: string, body?: string, subscribers?: string[] | undefined) {

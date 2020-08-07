@@ -88,6 +88,10 @@ export class UsersManager {
 				}
 				url
 				is_guest
+				account {
+					name
+					id
+				}
 			}
 		}`;
 	}

@@ -1,8 +1,8 @@
 // TODO: one day -.-
 declare module 'monday-sdk-js' {
-	export = init;
+  export = init;
 
-	namespace init {
+  namespace init {
     export interface MondaySDKResponse<T> {
       data: T;
       account_id: string;
@@ -29,9 +29,10 @@ declare module 'monday-sdk-js' {
       title?: string;
       location?: string;
       teams?: Team[];
+      account?: { id: number, name: string }
     }
 
-    export type User =  UserPreview & UserDetails;
+    export type User = UserPreview & UserDetails;
 
     // all / active / archived / deleted
     export enum State {
@@ -79,14 +80,14 @@ declare module 'monday-sdk-js' {
       subscribers: UserPreview[];
     }
 
-		export interface MondaySDK {
-			setToken: (token: string) => void;
-			api: <T = any>(query: string, options: any) => Promise<MondaySDKResponse<T>>;
-			oauthToken: (code: string, clientId: string, clientSecret: string) => Promise<any>;
-		}
-	}
+    export interface MondaySDK {
+      setToken: (token: string) => void;
+      api: <T = any>(query: string, options: any) => Promise<MondaySDKResponse<T>>;
+      oauthToken: (code: string, clientId: string, clientSecret: string) => Promise<any>;
+    }
+  }
 
-	function init(options?: { token: string }): MondaySDK;
+  function init(options?: { token: string }): MondaySDK;
 }
 
 /**

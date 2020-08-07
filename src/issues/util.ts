@@ -16,7 +16,7 @@ import { Repository, GitAPI, Remote, Commit, Ref } from '../typings/git';
 import { User, Team } from 'monday-sdk-js';
 
 export const ISSUE_EXPRESSION = /(([^\s]+)\/([^\s]+))?(#|GH-)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
-export const ISSUE_OR_URL_EXPRESSION = /(https?:\/\/github\.com\/(([^\s]+)\/([^\s]+))\/([^\s]+\/)?(issues|pull)\/([0-9]+)(#issuecomment\-([0-9]+))?)|(([^\s]+)\/([^\s]+))?(#|GH-)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
+export const ISSUE_OR_URL_EXPRESSION = /(https?:\/\/monday\.com\/(([^\s]+)\/([^\s]+))\/([^\s]+\/)?(pulses)\/([0-9]+)?)|(([^\s]+)\/([^\s]+))?(#)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
 
 export const USER_EXPRESSION: RegExp = /\@([^;]+)/;
 
