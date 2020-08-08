@@ -1,12 +1,16 @@
 import * as WorkspaceState from '../common/workspaceState';
 import * as vscode from 'vscode';
 import { ITelemetry } from '../common/telemetry';
-import { MondaySDK, Board } from 'monday-sdk-js';
+import { MondaySDK, Board, Group } from 'monday-sdk-js';
 import Logger from '../common/logger';
 
 export interface BoardsResponse {
 	boards: Board[];
-  }
+}
+
+export interface GroupsResponse {
+	boards: { groups: Group[] }[];
+}
 
 export class BoardsManager {
 	boards: Board[];
@@ -57,6 +61,11 @@ export class BoardsManager {
 		}
 	}
 
+	public async getBoardGroups(boardId: number): Promise<Group[]> {
+		const response = await this._mondaySDK.api<GroupsResponse>(this.allBoardGroups(boardId), '');
+		return response.data.boards[0].groups;
+	}
+
 	public setDefaultBoard(board: Board) {
 		this.defaultBoard = board;
 		WorkspaceState.store('monday', 'defaultBoard', this.defaultBoard);
@@ -74,6 +83,25 @@ export class BoardsManager {
 			},
 			board_kind
 		  }
+		}`;
+	}
+
+	private allBoardGroups(boardId: number) {
+		return `{
+			boards(ids: ${boardId}) {
+				groups {
+					id
+					title
+					deleted
+					archived
+					color
+					position
+					items {
+						id
+						name
+					}
+				}
+			}
 		}`;
 	}
 

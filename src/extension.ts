@@ -23,7 +23,7 @@ import { BoardProvider } from './views/boards';
 import { UserProvider } from './views/users';
 import { IssueFeatureRegistrar } from './issues/issueFeatureRegistrar';
 
-const aiKey: string = '5f5c7e72-c998-4afe-ac9b-4bf9b25ace98';
+const aiKey: string = '9fe62150-f293-4898-ae09-3cf831a8dd75';
 
 // fetch.promise polyfill
 const fetch = require('node-fetch');
@@ -79,7 +79,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
 	await itemsManager.init();
 
 	// init sidebar (extract to the relevant services?)
-	const boardsProvider = new BoardProvider(boardsManager);
+	const boardsProvider = new BoardProvider(boardsManager, itemsManager);
 	vscode.window.registerTreeDataProvider('boards', boardsProvider);
 
 	const usersProvider = new UserProvider(usersManager);

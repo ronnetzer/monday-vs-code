@@ -58,9 +58,12 @@ declare module 'monday-sdk-js' {
 
     export interface Group {
       id: number;
-      name: string;
+      title: string;
       deleted: boolean;
       archived: boolean;
+      color: string;
+      position: string;
+      items: ItemPreview[]
     }
 
     export interface Tag {
@@ -69,10 +72,13 @@ declare module 'monday-sdk-js' {
       color: string;
     }
 
-    export interface Item {
+    export interface ItemPreview {
       id: number;
       name: string;
-      color: string;
+    }
+
+    export interface Item extends ItemPreview {
+      state: State;
       creator_id: string;
       created_at: string;
       updated_at: string;

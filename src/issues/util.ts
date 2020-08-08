@@ -15,7 +15,7 @@ import { ReviewManager } from '../view/reviewManager';
 import { Repository, GitAPI, Remote, Commit, Ref } from '../typings/git';
 import { User, Team } from 'monday-sdk-js';
 
-export const ISSUE_EXPRESSION = /(([^\s]+)\/([^\s]+))?(#|GH-)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
+export const ISSUE_EXPRESSION = /(([^\s]+)\/([^\s]+))?(#)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
 export const ISSUE_OR_URL_EXPRESSION = /(https?:\/\/monday\.com\/(([^\s]+)\/([^\s]+))\/([^\s]+\/)?(pulses)\/([0-9]+)?)|(([^\s]+)\/([^\s]+))?(#)([1-9][0-9]*)($|[\s\:\;\-\(\=\)])/;
 
 export const USER_EXPRESSION: RegExp = /\@([^;]+)/;

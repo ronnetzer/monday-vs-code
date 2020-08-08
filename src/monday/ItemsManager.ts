@@ -27,7 +27,7 @@ export class ItemsManager {
 	}
 
 	async getEntries(): Promise<Item[]> {
-		return await this.sdk.api<ItemResponse>(this.ItemsQuery(), '').then(res => res.data.items);
+		return this.sdk.api<ItemResponse>(this.ItemsQuery(), '').then(res => res.data.items);
 	}
 
 	async getAllTags(): Promise<Tag[]> {
@@ -96,13 +96,15 @@ export class ItemsManager {
 		return `
 			id
 			name
-			color
+			state
 			creator_id
 			created_at
 			updated_at
 			group {
 				id
-				name
+				title
+				position
+				color
 				deleted
 				archived
 			}

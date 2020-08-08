@@ -10,7 +10,7 @@ import { ITelemetry } from './common/telemetry';
 import { CredentialStore } from './monday/credentials';
 import { BoardsManager } from './monday/boardsManager';
 import { UsersManager } from './monday/usersManager';
-import { BoardItem } from './views/boards';
+import { BoardTreeItem } from './views/boards';
 
 const _onDidUpdatePR = new vscode.EventEmitter<PullRequest | void>();
 export const onDidUpdatePR: vscode.Event<PullRequest | void> = _onDidUpdatePR.event;
@@ -33,7 +33,7 @@ export function registerCommands(context: vscode.ExtensionContext, telemetry: IT
 		boardsManager.getEntries();
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('boards.setDefault', async (boardItem: BoardItem) => {
+	context.subscriptions.push(vscode.commands.registerCommand('boards.setDefault', async (boardItem: BoardTreeItem) => {
 		boardsManager.setDefaultBoard(boardItem.board);
 	}));
 
