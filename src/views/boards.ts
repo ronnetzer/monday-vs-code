@@ -15,7 +15,19 @@ export class BoardProvider implements vscode.TreeDataProvider<any> {
 		this._onDidChangeTreeData.fire();
 	}
 
-	getTreeItem(element: BoardTreeItem): vscode.TreeItem {
+	getParent(element: BoardTreeItem | GroupTreeItem | ItemTreeItem): vscode.TreeItem | null {
+		return element instanceof BoardTreeItem ? null : element.parent;
+	}
+
+	resolveTreeItem(element: BoardTreeItem | GroupTreeItem | ItemTreeItem): Thenable<vscode.TreeItem> {
+		if (element instanceof ItemTreeItem) {
+			return this.itemsManager.getItem(element.item.id).then(item => new ItemTreeItem(item, element.parent))
+		}
+
+		return Promise.resolve(element);
+	}
+
+	getTreeItem(element: BoardTreeItem | GroupTreeItem | ItemTreeItem): vscode.TreeItem {
 		return element;
 	}
 
@@ -25,10 +37,10 @@ export class BoardProvider implements vscode.TreeDataProvider<any> {
 			if (element instanceof BoardTreeItem) {
 				// TODO: return all relevant items for this board.
 				return this.boardsManager.getBoardGroups(element.board.id)
-					.then(groups => groups.map(group => new GroupTreeItem(group, group.items.length ? vscode.TreeItemCollapsibleState.Collapsed : undefined)));
+					.then(groups => groups.map(group => new GroupTreeItem(group, element, group.items.length ? vscode.TreeItemCollapsibleState.Collapsed : undefined)));
 			} else {
 				// element is GroupItem
-				return Promise.resolve(element.group.items).then(items => items.map(item => new ItemTreeItem(item)));
+				return Promise.resolve(element.group.items).then(items => items.map(item => new ItemTreeItem(item, element)));
 			}
 		} else {
 			// if no element return the boards list
@@ -57,6 +69,7 @@ export class GroupTreeItem extends vscode.TreeItem {
 
 	constructor(
 		public readonly group: Group,
+		public readonly parent: BoardTreeItem,
 		public readonly collapsibleState?: vscode.TreeItemCollapsibleState,
 		public readonly command?: vscode.Command
 	) {
@@ -69,7 +82,8 @@ export class GroupTreeItem extends vscode.TreeItem {
 export class ItemTreeItem extends vscode.TreeItem {
 
 	constructor(
-		public readonly item: ItemPreview,
+		public readonly item: ItemPreview & Partial<Item>,
+		public readonly parent: GroupTreeItem,
 		public readonly collapsibleState?: vscode.TreeItemCollapsibleState,
 		public readonly command?: vscode.Command
 	) {

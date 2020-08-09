@@ -17,9 +17,7 @@
     "name": "Ron Netzer",
     "email": "ronnetzer@gmail.com"
   },
-  "contributors": [
-    "Daniel Netzer daniel.netzer7@gmail.com"
-  ],
+  "contributors": [{ "name": "Daniel Netzer", "email": "daniel.netzer7@gmail.com" }],
   "publisher": "Netzer",
   "engines": {
     "vscode": "^1.47.0"
@@ -28,6 +26,8 @@
     "monday",
     "project management",
     "task",
+    "vscode",
+    "vscode-extension",
     "items"
   ],
   "galleryBanner": {
@@ -149,6 +149,9 @@
       ]
     },
     "menus": {
+      "commandPalette": [
+
+      ],
       "view/title": [
         {
           "command": "boards.refresh",
@@ -165,6 +168,11 @@
         {
           "command": "boards.setDefault",
           "when": "view == boards && viewItem == board"
+        },
+        {
+          "command": "issue.createIssue",
+          "when": "view == boards && viewItem == group",
+          "group": "navigation"
         }
       ]
     },
@@ -172,18 +180,12 @@
       {
         "command": "boards.refresh",
         "title": "Refresh",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
+        "icon": "$(refresh)"
       },
       {
         "command": "users.refresh",
         "title": "Refresh",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        },
+        "icon": "$(refresh)",
         "category": "Monday"
       },
       {
@@ -205,6 +207,35 @@
         "command": "board.select",
         "title": "Switch Default Board",
         "category": "Monday"
+      },
+      {
+        "command": "issue.createIssueFromSelection",
+        "title": "Create Item From Selection",
+        "category": "Monday"
+      },
+      {
+        "command": "issue.createIssueFromClipboard",
+        "title": "Create Item From Clipboard",
+        "category": "Monday"
+      },
+      {
+        "command": "issue.createIssue",
+        "title": "Create an Item",
+        "category": "Monday",
+        "icon": "$(plus)"
+      },
+      {
+        "command": "issue.createItemFromFile",
+        "title": "Create Item",
+        "icon": "$(check)"
+      },
+      {
+        "command": "issue.issueCompletion",
+        "title": "Item Completion Chosen"
+      },
+      {
+        "command": "issue.userCompletion",
+        "title": "User Completion Chosen"
       }
     ],
     "keybindings": [
@@ -227,7 +258,7 @@
           "light": "#00000048",
           "highContrast": "editor.foreground"
         },
-        "description": "The color used for the assignees and labels fields in a new issue editor."
+        "description": "The color used for the assignees and labels fields in a new item editor."
       }
     ]
   },

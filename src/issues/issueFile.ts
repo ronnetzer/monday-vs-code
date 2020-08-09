@@ -6,8 +6,8 @@
 import * as vscode from 'vscode';
 import { ItemsManager } from '../monday/ItemsManager';
 
-export const NEW_ISSUE_SCHEME = 'newIssue';
-export const NEW_ISSUE_FILE = 'NewIssue.md';
+export const NEW_ISSUE_SCHEME = 'newItem';
+export const NEW_ISSUE_FILE = 'NewItem.md';
 export const SUBSCRIBERS = 'Subscribers:';
 export const TAGS = 'Tags:';
 

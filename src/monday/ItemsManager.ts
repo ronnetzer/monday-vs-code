@@ -30,6 +30,10 @@ export class ItemsManager {
 		return this.sdk.api<ItemResponse>(this.ItemsQuery(), '').then(res => res.data.items);
 	}
 
+	async getItem(id: number): Promise<Item> {
+		return this.sdk.api<ItemResponse>(this.ItemsQuery([id]), '').then(res => res.data.items[0]);
+	}
+
 	async getAllTags(): Promise<Tag[]> {
 		const boardIds = this.boardsManager.boards.map(board => board.id);
 		return Promise.all([
@@ -84,9 +88,9 @@ export class ItemsManager {
 				}`;
 	}
 
-	private ItemsQuery(): string {
+	private ItemsQuery(ids?: number[]): string {
 		return `{
-			items {
+			items ${ids ? `(ids: [${ids.join(', ')}])` : ``} {
 				${this.itemsModelQuery()}
 			}
 		}`;

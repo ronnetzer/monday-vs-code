@@ -402,15 +402,15 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		quickInput.value = titlePlaceholder ?? '';
 		quickInput.prompt = 'Set the item title. Confirm to create the item now or use the edit button to edit the issue title and description.';
 		quickInput.title = 'Create Item';
-		// quickInput.buttons = [
-		// 	{
-		// 		iconPath: {
-		// 			light: Resource.icons.light.Edit,
-		// 			dark: Resource.icons.dark.Edit
-		// 		},
-		// 		tooltip: 'Edit Description'
-		// 	}
-		// ];
+		quickInput.buttons = [
+			{
+				iconPath: {
+					light: Resource.icons.light.Edit,
+					dark: Resource.icons.dark.Edit
+				},
+				tooltip: 'Edit Description'
+			}
+		];
 		quickInput.onDidAccept(async () => {
 			title = quickInput.value;
 			if (title) {
@@ -421,16 +421,15 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 			quickInput.hide();
 		});
 
-		// TODO: adjust file format and parsing to fit monday.com format
-		// quickInput.onDidTriggerButton(async () => {
-		// 	title = quickInput.value;
-		// 	quickInput.busy = true;
-		// 	this.createIssueInfo = { document, newIssue, lineNumber, insertIndex };
+		quickInput.onDidTriggerButton(async () => {
+			title = quickInput.value;
+			quickInput.busy = true;
+			this.createIssueInfo = { document, newIssue, lineNumber, insertIndex };
 
-		// 	this.makeNewItemFile(title, body, subscribers);
-		// 	quickInput.busy = false;
-		// 	quickInput.hide();
-		// });
+			this.makeNewItemFile(title, body, subscribers);
+			quickInput.busy = false;
+			quickInput.hide();
+		});
 		quickInput.show();
 	}
 
@@ -480,13 +479,13 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
 		const labelLine = `${TAGS} `;
 		const text =
 			`${title ?? 'Issue Title'}\n
-${subscribersLine}
+${subscribersLine}\n
 ${labelLine}\n
 ${body ?? ''}\n
 <!-- Edit the body of your new issue then click the ✓ \"Create Issue\" button in the top right of the editor. The first line will be the issue title. Assignees and Labels follow after a blank line. Leave an empty line before beginning the body of the issue. -->`;
 		await vscode.workspace.fs.writeFile(bodyPath, this.stringToUint8Array(text));
 		const subscribersDecoration = vscode.window.createTextEditorDecorationType({ after: { contentText: ' Comma-separated usernames, either @username or just username.', fontStyle: 'italic', color: new vscode.ThemeColor('issues.newIssueDecoration') } });
-		const labelsDecoration = vscode.window.createTextEditorDecorationType({ after: { contentText: ' Comma-separated labels.', fontStyle: 'italic', color: new vscode.ThemeColor('issues.newIssueDecoration') } });
+		const tagsDecoration = vscode.window.createTextEditorDecorationType({ after: { contentText: ' Comma-separated tags.', fontStyle: 'italic', color: new vscode.ThemeColor('issues.newIssueDecoration') } });
 		const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor((textEditor => {
 			if (textEditor?.document.uri.scheme === NEW_ISSUE_SCHEME) {
 				const assigneeFullLine = textEditor.document.lineAt(2);
@@ -495,12 +494,13 @@ ${body ?? ''}\n
 				}
 				const labelFullLine = textEditor.document.lineAt(3);
 				if (labelFullLine.text.startsWith(TAGS)) {
-					textEditor.setDecorations(labelsDecoration, [new vscode.Range(new vscode.Position(3, 0), new vscode.Position(3, labelFullLine.text.length))]);
+					textEditor.setDecorations(tagsDecoration, [new vscode.Range(new vscode.Position(3, 0), new vscode.Position(3, labelFullLine.text.length))]);
 				}
 			}
 		}));
 
 		const editor = await vscode.window.showTextDocument(bodyPath);
+
 		const closeDisposable = vscode.workspace.onDidCloseTextDocument((textDocument) => {
 			if (textDocument === editor.document) {
 				editorChangeDisposable.dispose();

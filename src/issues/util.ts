@@ -449,8 +449,12 @@ export async function pushAndCreatePR(manager: PullRequestManager, reviewManager
 
 export async function isComment(document: vscode.TextDocument, position: vscode.Position): Promise<boolean> {
 	if ((document.languageId !== 'markdown') && (document.languageId !== 'plaintext')) {
-		const tokenInfo = await vscode.languages.getTokenInformationAtPosition(document, position);
-		if (tokenInfo.type !== vscode.StandardTokenType.Comment) {
+		// proposed api
+		/* const tokenInfo = await vscode.languages.getTokenInformationAtPosition(document, position);
+		if (tokenInfo.type !== vscode.StandardTokenType.Comment) { */
+
+		const commentWord = document.getText(new vscode.Range(position.translate(0, -position.character), position.translate(0, -position.character + 2)));
+		if (commentWord !== '//') {
 			return false;
 		}
 	}
