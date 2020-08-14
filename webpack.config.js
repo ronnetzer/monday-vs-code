@@ -3,11 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-//@ts-check
-
 const path = require('path');
 const webpack = require('webpack');
-const TSLintPlugin = require('tslint-webpack-plugin');
 
 /**
  *
@@ -28,23 +25,6 @@ function getExtensionConfig(env) {
 				{
 					test: /\.tsx?$/,
 					use: 'ts-loader',
-					exclude: /node_modules/
-				},
-				// FIXME: apollo-client uses .mjs, which imposes hard restrictions
-				// on imports available from other callers. They probably didn't know
-				// this. They just used .mjs because it seemed new and hip.
-				//
-				// We should either fix or remove that package, then remove this rule,
-				// which introduces nonstandard behavior for mjs files, which are
-				// terrible. This is all terrible. Everything is terrible.👇🏾
-				{
-					test: /\.mjs$/,
-					include: /node_modules/,
-					type: "javascript/auto",
-				},
-				{
-					test: /\.gql/,
-					loader: 'graphql-tag/loader',
 					exclude: /node_modules/
 				}
 			]

@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as temp from 'temp';
-import { ExtensionContext, Uri } from 'vscode';
+import { ExtensionContext, ExtensionRuntime, Uri } from 'vscode';
 
 import { InMemoryMemento } from './inMemoryMemento';
 
@@ -20,6 +20,7 @@ export class MockExtensionContext implements ExtensionContext {
 	extensionUri: Uri;
 	environmentVariableCollection: any;
 	extensionMode: any;
+	readonly extensionRuntime: ExtensionRuntime;
 
 	constructor() {
 		this.storagePath = temp.mkdirSync('storage-path');

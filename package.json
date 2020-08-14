@@ -271,7 +271,8 @@
     "compile": "tsc -p ./",
     "clean": "rm -r out/ media/",
     "watch": "webpack --watch --env.development",
-    "test": "node ./out/test/runTests.js"
+    "test": "node ./out/test/runTests.js",
+    "build:prod": "webpack --env.production"
   },
   "devDependencies": {
     "@types/chai": "^4.1.4",
@@ -316,7 +317,7 @@
     "typescript": "^3.8.3",
     "vscode-test": "^1.3.0",
     "webpack": "^4.41.6",
-    "webpack-cli": "^3.3.11"
+    "webpack-cli": "^3.3.12"
   },
   "dependencies": {
     "@octokit/rest": "^16.21.0",
