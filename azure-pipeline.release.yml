@@ -33,6 +33,3 @@ jobs:
     displayName: Publish
     env:
 	  TOKEN: $(vsce.token)
-
-
-# u5cmctejyusrzuan2yyx3zwr24gxrlisbfdbj74wadogezuie7fa
