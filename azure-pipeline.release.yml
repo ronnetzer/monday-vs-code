@@ -1,6 +1,7 @@
 # Run on a schedule
 trigger: none
 pr: none
+name: Release
 
 jobs:
 - job: release
@@ -32,4 +33,4 @@ jobs:
   - script: vsce publish -p "$TOKEN" --yarn --noVerify
     displayName: Publish
     env:
-	  TOKEN: $(vsce.token)
+      TOKEN: $(vsce.token)
