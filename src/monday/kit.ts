@@ -107,11 +107,10 @@ export class MondayKit {
 
                         <body>
                             Authenticated Successfully! 🤙 </br>
-                            <button onclick="backToWorkspace()">Back to workspace</button>
                             <script>
-                                function backToWorkspace() {
-                                    window.location.href = "vscode://file/${projectUrl}"
-                                };
+                            window.onload = function() {
+                                window.location.href = "vscode://file/${projectUrl}"
+                              };
                             </script>
                         </body>
 
