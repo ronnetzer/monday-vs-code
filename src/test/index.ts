@@ -10,64 +10,72 @@ import { mockWebviewEnvironment } from './mocks/mockWebviewEnvironment';
 // Since we are not running in a tty environment, we just implement the method statically.
 // This is copied verbatim from the upstream, default Mocha test runner:
 // https://github.com/microsoft/vscode-extension-vscode/blob/master/lib/testrunner.ts
+// eslint-disable-next-line
 const tty = require('tty') as any;
 if (!tty.getWindowSize) {
-	tty.getWindowSize = function () { return [80, 75]; };
+    tty.getWindowSize = function () {
+        return [80, 75];
+    };
 }
 
 function addTests(mocha: Mocha, root: string): Promise<void> {
-	return new Promise((resolve, reject) => {
-		glob('**/**.test.js', {cwd: root}, (error, files) => {
-			if (error) {
-				return reject(error);
-			}
+    return new Promise((resolve, reject) => {
+        glob('**/**.test.js', { cwd: root }, (error, files) => {
+            if (error) {
+                return reject(error);
+            }
 
-			for (const testFile of files) {
-				mocha.addFile(path.join(root, testFile));
-			}
-			resolve();
-		});
-	});
+            for (const testFile of files) {
+                mocha.addFile(path.join(root, testFile));
+            }
+            resolve();
+        });
+    });
 }
 
 async function runAllExtensionTests(testsRoot: string): Promise<number> {
-	// Ensure the dev-mode extension is activated
-	const { name, publisher } = require('../../package.json') as { name: string, publisher: string };
-	const extensionId = `${publisher}.${name}`;
-	await vscode.extensions.getExtension(extensionId)!.activate();
+    // Ensure the dev-mode extension is activated
+    // eslint-disable-next-line
+    const { name, publisher } = require('../../package.json') as {
+        name: string;
+        publisher: string;
+    };
+    const extensionId = `${publisher}.${name}`;
+    await vscode.extensions.getExtension(extensionId)!.activate();
 
-	mockWebviewEnvironment.install(global);
+    mockWebviewEnvironment.install(global);
 
-	const mocha = new Mocha({
-		ui: 'bdd',
-		useColors: true,
-	});
-	mocha.addFile(path.resolve(testsRoot, 'globalHooks.js'));
+    const mocha = new Mocha({
+        ui: 'bdd',
+        useColors: true,
+    });
+    mocha.addFile(path.resolve(testsRoot, 'globalHooks.js'));
 
-	await addTests(mocha, testsRoot);
+    await addTests(mocha, testsRoot);
 
-	if (process.env.TEST_JUNIT_XML_PATH) {
-		mocha.reporter('mocha-multi-reporters', {
-			reporterEnabled: 'mocha-junit-reporter, spec',
-			mochaJunitReporterReporterOptions: {
-				mochaFile: process.env.TEST_JUNIT_XML_PATH,
-				suiteTitleSeparatedBy: ' / ',
-				outputs: true,
-			}
-		});
-	}
+    if (process.env.TEST_JUNIT_XML_PATH) {
+        mocha.reporter('mocha-multi-reporters', {
+            reporterEnabled: 'mocha-junit-reporter, spec',
+            mochaJunitReporterReporterOptions: {
+                mochaFile: process.env.TEST_JUNIT_XML_PATH,
+                suiteTitleSeparatedBy: ' / ',
+                outputs: true,
+            },
+        });
+    }
 
-	return new Promise((resolve) => mocha.run(resolve));
+    return new Promise((resolve) => mocha.run(resolve));
 }
 
 export function run(testsRoot: string, clb: (error: Error | null, failures?: number) => void): void {
-	require('source-map-support').install();
+    // eslint-disable-next-line
+    require('source-map-support').install();
 
-	runAllExtensionTests(testsRoot).then(
-		failures => clb(null, failures),
-		error => {
-			console.log(error.stack);
-			clb(error);
-		},
-	);
+    runAllExtensionTests(testsRoot).then(
+        (failures) => clb(null, failures),
+        (error) => {
+            console.log(error.stack);
+            clb(error);
+        },
+    );
 }

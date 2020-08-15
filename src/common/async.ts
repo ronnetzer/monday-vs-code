@@ -4,43 +4,43 @@
  *--------------------------------------------------------------------------------------------*/
 
 function done<T>(promise: Promise<T>): Promise<void> {
-	return promise.then<void>(() => undefined);
+    return promise.then<void>(() => undefined);
 }
 
 export function throttle<T>(fn: () => Promise<T>): () => Promise<T> {
-	let current: Promise<T> | undefined;
-	let next: Promise<T> | undefined;
+    let current: Promise<T> | undefined;
+    let next: Promise<T> | undefined;
 
-	const trigger = (): Promise<T> => {
-		if (next) {
-			return next;
-		}
+    const trigger = (): Promise<T> => {
+        if (next) {
+            return next;
+        }
 
-		if (current) {
-			next = done(current).then(() => {
-				next = undefined;
-				return trigger();
-			});
+        if (current) {
+            next = done(current).then(() => {
+                next = undefined;
+                return trigger();
+            });
 
-			return next;
-		}
+            return next;
+        }
 
-		current = fn();
+        current = fn();
 
-		const clear = () => current = undefined;
-		done(current).then(clear, clear);
+        const clear = () => (current = undefined);
+        done(current).then(clear, clear);
 
-		return current;
-	};
+        return current;
+    };
 
-	return trigger;
+    return trigger;
 }
 
-export function debounce(fn: () => any, delay: number): () => void {
-	let timer: any;
+export function debounce(fn: () => unknown, delay: number): () => void {
+    let timer: NodeJS.Timeout;
 
-	return () => {
-		clearTimeout(timer);
-		timer = setTimeout(() => fn(), delay);
-	};
+    return () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(), delay);
+    };
 }

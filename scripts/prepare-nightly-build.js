@@ -1,3 +1,4 @@
+/* eslint-disable */
 const fs = require('fs');
 const argv = require('minimist')(process.argv.slice(2));
 
@@ -6,10 +7,10 @@ const json = JSON.parse(fs.readFileSync('./package.json').toString());
 // update name, publisher and description
 // calculate version
 let version = argv['v'];
-if (typeof(version) !== 'string') {
-	const date = new Date();
-	const monthMinutes = (date.getDate() - 1) * 24 * 60 + date.getHours() * 60 + date.getMinutes();
-	version = `${date.getFullYear()}.${date.getMonth() + 1}.${monthMinutes}`;
+if (typeof version !== 'string') {
+    const date = new Date();
+    const monthMinutes = (date.getDate() - 1) * 24 * 60 + date.getHours() * 60 + date.getMinutes();
+    version = `${date.getFullYear()}.${date.getMonth() + 1}.${monthMinutes}`;
 }
 
 const id = argv['i'];
@@ -17,15 +18,15 @@ const displayName = argv['n'];
 const description = argv['d'];
 const publisher = argv['p'];
 if (!id || !displayName || !description || !publisher) {
-	return;
+    return;
 }
 
 const insiderPackageJson = Object.assign(json, {
-	name: id,
-	version: version,
-	displayName: displayName,
-	description: description,
-	publisher: publisher
+    name: id,
+    version: version,
+    displayName: displayName,
+    description: description,
+    publisher: publisher,
 });
 
 fs.writeFileSync('./package.insiders.json', JSON.stringify(insiderPackageJson));
@@ -44,5 +45,8 @@ ${readme}
 fs.writeFileSync('./README.insiders.md', previewReadme);
 
 const constants = fs.readFileSync('./src/constants.ts').toString();
-const insiderConstants = constants.replace(`export const EXTENSION_ID = 'monday-vscode-extension';`, `export const EXTENSION_ID = 'monday-vscode-extension';`);
+const insiderConstants = constants.replace(
+    `export const EXTENSION_ID = 'monday-vscode-extension';`,
+    `export const EXTENSION_ID = 'monday-vscode-extension';`,
+);
 fs.writeFileSync('./src/constants.insiders.ts', insiderConstants);

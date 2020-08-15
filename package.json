@@ -1,352 +1,380 @@
 {
-  "name": "monday-vscode-extension",
-  "displayName": "Monday VSCode extension",
-  "description": "Manage your Monday items, boards, teams from vscode",
-  "icon": "resources/icons/monday-icon.png",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ronnetzer/monday-vs-code"
-  },
-  "bugs": {
-    "url": "https://github.com/ronnetzer/monday-vs-code/issues"
-  },
-  "enableProposedApi": true,
-  "preview": true,
-  "version": "0.0.1",
-  "author": {
-    "name": "Ron Netzer",
-    "email": "ronnetzer@gmail.com"
-  },
-  "contributors": [
-    {
-      "name": "Daniel Netzer",
-      "email": "daniel.netzer7@gmail.com"
+    "name": "monday-vscode-extension",
+    "displayName": "Monday VSCode extension",
+    "description": "Manage your Monday items, boards, teams from vscode",
+    "icon": "resources/icons/monday-icon.png",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ronnetzer/monday-vs-code"
+    },
+    "bugs": {
+        "url": "https://github.com/ronnetzer/monday-vs-code-wiki/issues"
+    },
+    "enableProposedApi": true,
+    "preview": true,
+    "version": "0.0.1",
+    "author": {
+        "name": "Ron Netzer",
+        "email": "ronnetzer@gmail.com"
+    },
+    "contributors": [
+        {
+            "name": "Daniel Netzer",
+            "email": "daniel.netzer7@gmail.com"
+        }
+    ],
+    "publisher": "Netzer",
+    "engines": {
+        "vscode": "^1.47.0"
+    },
+    "keywords": [
+        "monday",
+        "project management",
+        "task",
+        "vscode",
+        "vscode-extension",
+        "items"
+    ],
+    "galleryBanner": {
+        "color": "#C80000",
+        "theme": "dark"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "*",
+        "onFileSystem:newItem"
+    ],
+    "extensionDependencies": [
+        "vscode.git",
+        "vscode.github-authentication"
+    ],
+    "main": "./media/extension.js",
+    "contributes": {
+        "configuration": {
+            "type": "object",
+            "title": "Monday",
+            "properties": {
+                "mondayExtension.telemetry.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable usage data and errors to be sent to a Monday online service"
+                },
+                "mondayExtension.logLevel": {
+                    "type": "string",
+                    "enum": [
+                        "info",
+                        "debug",
+                        "off"
+                    ],
+                    "default": "info",
+                    "description": "Logging for GitHub Pull Request extension. The log is emitted to the output channel named as GitHub Pull Request."
+                },
+                "mondayExtension.createIssueTriggers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "description": "String that enables the 'Create issue from comment' code action. Should not container whitespace."
+                    },
+                    "default": [
+                        "TODO",
+                        "todo",
+                        "BUG",
+                        "FIXME",
+                        "ISSUE",
+                        "HACK"
+                    ],
+                    "description": "Strings that will cause the 'Create issue from comment' code action to show."
+                },
+                "mondayExtension.createInsertFormat": {
+                    "type": "string",
+                    "enum": [
+                        "number",
+                        "url"
+                    ],
+                    "default": "number",
+                    "description": "Controls whether an issue number (ex. #1234) or a full url (ex. https://github.com/owner/name/issues/1234) is inserted when the Create Issue code action is run."
+                },
+                "mondayExtension.issueCompletions.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Controls whether completion suggestions are shown for issues."
+                },
+                "mondayExtension.userCompletions.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Controls whether completion suggestions are shown for users."
+                },
+                "mondayExtension.ignoreCompletionTrigger": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "description": "Language that issue completions should not trigger on '#'."
+                    },
+                    "default": [
+                        "python"
+                    ],
+                    "description": "Languages that the '#' character should not be used to trigger issue completion suggestions."
+                },
+                "mondayExtension.ignoreUserCompletionTrigger": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "description": "Language that user completions should not trigger on '@'."
+                    },
+                    "default": [
+                        "python"
+                    ],
+                    "description": "Languages that the '@' character should not be used to trigger user completion suggestions."
+                }
+            }
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "monday",
+                    "title": "monday",
+                    "icon": "resources/icons/monday-icon.png"
+                }
+            ]
+        },
+        "views": {
+            "monday": [
+                {
+                    "id": "boards",
+                    "name": "Boards",
+                    "contextualTitle": ""
+                },
+                {
+                    "id": "users",
+                    "name": "Users",
+                    "contextualTitle": ""
+                }
+            ]
+        },
+        "menus": {
+            "commandPalette": [],
+            "view/title": [
+                {
+                    "command": "boards.refresh",
+                    "when": "view == boards",
+                    "group": "navigation"
+                },
+                {
+                    "command": "users.refresh",
+                    "when": "view == users",
+                    "group": "navigation"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "boards.setDefault",
+                    "when": "view == boards && viewItem == board"
+                },
+                {
+                    "command": "issue.createIssue",
+                    "when": "view == boards && viewItem == group",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "boards.refresh",
+                "title": "Refresh",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "users.refresh",
+                "title": "Refresh",
+                "icon": "$(refresh)",
+                "category": "Monday"
+            },
+            {
+                "command": "boards.setDefault",
+                "title": "Set Default",
+                "category": "Monday"
+            },
+            {
+                "command": "auth.signout",
+                "title": "Sign out",
+                "category": "Monday"
+            },
+            {
+                "command": "auth.login",
+                "title": "Login",
+                "category": "Monday"
+            },
+            {
+                "command": "board.select",
+                "title": "Switch Default Board",
+                "category": "Monday"
+            },
+            {
+                "command": "issue.createIssueFromSelection",
+                "title": "Create Item From Selection",
+                "category": "Monday"
+            },
+            {
+                "command": "issue.createIssueFromClipboard",
+                "title": "Create Item From Clipboard",
+                "category": "Monday"
+            },
+            {
+                "command": "issue.createIssue",
+                "title": "Create an Item",
+                "category": "Monday",
+                "icon": "$(plus)"
+            },
+            {
+                "command": "issue.createItemFromFile",
+                "title": "Create Item",
+                "icon": "$(check)"
+            },
+            {
+                "command": "issue.issueCompletion",
+                "title": "Item Completion Chosen"
+            },
+            {
+                "command": "issue.userCompletion",
+                "title": "User Completion Chosen"
+            }
+        ],
+        "keybindings": [
+            {
+                "key": "ctrl+shift+space",
+                "command": "issue.suggestRefresh",
+                "when": "suggestWidgetVisible"
+            },
+            {
+                "key": "ctrl+s",
+                "command": "issue.createItemFromFile",
+                "when": "resourceScheme == newItem && config.files.autoSave != off"
+            }
+        ],
+        "colors": [
+            {
+                "id": "items.newItemDecoration",
+                "defaults": {
+                    "dark": "#ffffff48",
+                    "light": "#00000048",
+                    "highContrast": "editor.foreground"
+                },
+                "description": "The color used for the assignees and labels fields in a new item editor."
+            }
+        ]
+    },
+    "scripts": {
+        "release": "npx node-env-run --exec \"semantic-release\"",
+        "adjust-version": "rjp package.json version $VERSION",
+        "vscode:prepublish": "webpack --env.production",
+        "postinstall": "cd src/typings && npx vscode-dts master",
+        "compile": "tsc -p ./",
+        "clean": "rm -r out/ media/",
+        "watch": "webpack --watch --env.development",
+        "test": "node ./out/test/runTests.js",
+        "build:prod": "webpack --env.production",
+        "lint": "eslint '*/**/*.{js,ts}' --fix"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^9.1.1",
+        "@commitlint/config-conventional": "^9.1.1",
+        "@semantic-release/changelog": "^5.0.0",
+        "@semantic-release/commit-analyzer": "^8.0.1",
+        "@semantic-release/exec": "^5.0.0",
+        "@semantic-release/git": "^9.0.0",
+        "@types/chai": "^4.1.4",
+        "@types/debounce": "^3.0.0",
+        "@types/express": "4.11.1",
+        "@types/glob": "7.1.1",
+        "@types/graphql": "^14.0.5",
+        "@types/keytar": "^4.0.1",
+        "@types/lru-cache": "^5.1.0",
+        "@types/marked": "^0.7.2",
+        "@types/mocha": "^5.2.2",
+        "@types/node": "^12.0.0",
+        "@types/node-fetch": "^2.1.4",
+        "@types/query-string": "^6.1.1",
+        "@types/react": "^16.8.4",
+        "@types/react-dom": "^16.8.2",
+        "@types/sinon": "7.0.11",
+        "@types/temp": "0.8.34",
+        "@types/uuid": "^3.4.3",
+        "@types/webpack": "^4.41.6",
+        "@typescript-eslint/eslint-plugin": "^3.9.0",
+        "@typescript-eslint/parser": "^3.9.0",
+        "css-loader": "^3.4.2",
+        "cz-customizable": "^6.3.0",
+        "eslint": "^7.7.0",
+        "eslint-config-prettier": "^6.11.0",
+        "eslint-plugin-prettier": "^3.1.4",
+        "glob": "7.1.6",
+        "husky": "^4.2.5",
+        "jsdom": "16.2.0",
+        "jsdom-global": "3.0.2",
+        "lint-staged": "^10.2.11",
+        "minimist": "^1.2.3",
+        "mkdirp": "0.5.1",
+        "mocha": "^7.0.1",
+        "mocha-junit-reporter": "1.23.0",
+        "mocha-multi-reporters": "1.1.7",
+        "prettier": "2.0.5",
+        "react": "^16.12.0",
+        "react-dom": "^16.12.0",
+        "react-testing-library": "7.0.1",
+        "sinon": "9.0.0",
+        "source-map-support": "0.5.16",
+        "style-loader": "^1.1.3",
+        "svg-inline-loader": "^0.8.2",
+        "temp": "0.9.1",
+        "ts-loader": "^6.2.1",
+        "tslint": "^6.0.0",
+        "tslint-webpack-plugin": "^2.1.0",
+        "tty": "1.0.1",
+        "typescript": "^3.8.3",
+        "vscode-test": "^1.3.0",
+        "webpack": "^4.41.6",
+        "webpack-cli": "^3.3.12"
+    },
+    "dependencies": {
+        "@octokit/rest": "^16.21.0",
+        "apollo-boost": "^0.1.22",
+        "apollo-link-context": "^1.0.12",
+        "debounce": "^1.2.0",
+        "es6-promise": "^4.2.5",
+        "events": "^3.0.0",
+        "git-credential-node": "^1.1.0",
+        "graphql": "^14.0.2",
+        "js-base64": "^2.5.2",
+        "lru-cache": "^5.1.1",
+        "marked": "^0.8.0",
+        "moment": "^2.22.1",
+        "monday-sdk-js": "0.1.0",
+        "node-emoji": "^1.8.1",
+        "node-fetch": "3.0.0-beta.7",
+        "query-string": "^6.2.0",
+        "ssh-config": "^2.0.0-alpha.3",
+        "tunnel": "0.0.6",
+        "uuid": "^3.3.3",
+        "vscode-extension-telemetry": "^0.1.6",
+        "vsls": "^0.3.967"
+    },
+    "optionalDependencies": {
+        "spawn-sync": "^2.0.0"
+    },
+    "resolutions": {
+        "webpack/**/tar": "^4.4.2"
+    },
+    "license": "MIT",
+    "config": {
+        "commitizen": {
+            "path": "node_modules/cz-customizable"
+        }
+    },
+    "commitlint": {
+        "extends": [
+            "@commitlint/config-conventional"
+        ]
     }
-  ],
-  "publisher": "Netzer",
-  "engines": {
-    "vscode": "^1.47.0"
-  },
-  "keywords": [
-    "monday",
-    "project management",
-    "task",
-    "vscode",
-    "vscode-extension",
-    "items"
-  ],
-  "galleryBanner": {
-    "color": "#C80000",
-    "theme": "dark"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "*",
-    "onFileSystem:newItem"
-  ],
-  "extensionDependencies": [
-    "vscode.git",
-    "vscode.github-authentication"
-  ],
-  "main": "./media/extension.js",
-  "contributes": {
-    "configuration": {
-      "type": "object",
-      "title": "Monday",
-      "properties": {
-        "mondayExtension.telemetry.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable usage data and errors to be sent to a Monday online service"
-        },
-        "mondayExtension.logLevel": {
-          "type": "string",
-          "enum": [
-            "info",
-            "debug",
-            "off"
-          ],
-          "default": "info",
-          "description": "Logging for GitHub Pull Request extension. The log is emitted to the output channel named as GitHub Pull Request."
-        },
-        "mondayExtension.createIssueTriggers": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "description": "String that enables the 'Create issue from comment' code action. Should not container whitespace."
-          },
-          "default": [
-            "TODO",
-            "todo",
-            "BUG",
-            "FIXME",
-            "ISSUE",
-            "HACK"
-          ],
-          "description": "Strings that will cause the 'Create issue from comment' code action to show."
-        },
-        "mondayExtension.createInsertFormat": {
-          "type": "string",
-          "enum": [
-            "number",
-            "url"
-          ],
-          "default": "number",
-          "description": "Controls whether an issue number (ex. #1234) or a full url (ex. https://github.com/owner/name/issues/1234) is inserted when the Create Issue code action is run."
-        },
-        "mondayExtension.issueCompletions.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Controls whether completion suggestions are shown for issues."
-        },
-        "mondayExtension.userCompletions.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Controls whether completion suggestions are shown for users."
-        },
-        "mondayExtension.ignoreCompletionTrigger": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "description": "Language that issue completions should not trigger on '#'."
-          },
-          "default": [
-            "python"
-          ],
-          "description": "Languages that the '#' character should not be used to trigger issue completion suggestions."
-        },
-        "mondayExtension.ignoreUserCompletionTrigger": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "description": "Language that user completions should not trigger on '@'."
-          },
-          "default": [
-            "python"
-          ],
-          "description": "Languages that the '@' character should not be used to trigger user completion suggestions."
-        }
-      }
-    },
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "monday",
-          "title": "monday",
-          "icon": "resources/icons/monday-icon.png"
-        }
-      ]
-    },
-    "views": {
-      "monday": [
-        {
-          "id": "boards",
-          "name": "Boards",
-          "contextualTitle": ""
-        },
-        {
-          "id": "users",
-          "name": "Users",
-          "contextualTitle": ""
-        }
-      ]
-    },
-    "menus": {
-      "commandPalette": [],
-      "view/title": [
-        {
-          "command": "boards.refresh",
-          "when": "view == boards",
-          "group": "navigation"
-        },
-        {
-          "command": "users.refresh",
-          "when": "view == users",
-          "group": "navigation"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "boards.setDefault",
-          "when": "view == boards && viewItem == board"
-        },
-        {
-          "command": "issue.createIssue",
-          "when": "view == boards && viewItem == group",
-          "group": "navigation"
-        }
-      ]
-    },
-    "commands": [
-      {
-        "command": "boards.refresh",
-        "title": "Refresh",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "users.refresh",
-        "title": "Refresh",
-        "icon": "$(refresh)",
-        "category": "Monday"
-      },
-      {
-        "command": "boards.setDefault",
-        "title": "Set Default",
-        "category": "Monday"
-      },
-      {
-        "command": "auth.signout",
-        "title": "Sign out",
-        "category": "Monday"
-      },
-      {
-        "command": "auth.login",
-        "title": "Login",
-        "category": "Monday"
-      },
-      {
-        "command": "board.select",
-        "title": "Switch Default Board",
-        "category": "Monday"
-      },
-      {
-        "command": "issue.createIssueFromSelection",
-        "title": "Create Item From Selection",
-        "category": "Monday"
-      },
-      {
-        "command": "issue.createIssueFromClipboard",
-        "title": "Create Item From Clipboard",
-        "category": "Monday"
-      },
-      {
-        "command": "issue.createIssue",
-        "title": "Create an Item",
-        "category": "Monday",
-        "icon": "$(plus)"
-      },
-      {
-        "command": "issue.createItemFromFile",
-        "title": "Create Item",
-        "icon": "$(check)"
-      },
-      {
-        "command": "issue.issueCompletion",
-        "title": "Item Completion Chosen"
-      },
-      {
-        "command": "issue.userCompletion",
-        "title": "User Completion Chosen"
-      }
-    ],
-    "keybindings": [
-      {
-        "key": "ctrl+shift+space",
-        "command": "issue.suggestRefresh",
-        "when": "suggestWidgetVisible"
-      },
-      {
-        "key": "ctrl+s",
-        "command": "issue.createItemFromFile",
-        "when": "resourceScheme == newItem && config.files.autoSave != off"
-      }
-    ],
-    "colors": [
-      {
-        "id": "items.newItemDecoration",
-        "defaults": {
-          "dark": "#ffffff48",
-          "light": "#00000048",
-          "highContrast": "editor.foreground"
-        },
-        "description": "The color used for the assignees and labels fields in a new item editor."
-      }
-    ]
-  },
-  "scripts": {
-    "vscode:prepublish": "webpack --env.production",
-    "postinstall": "cd src/typings && npx vscode-dts master && npx vscode-dts dev master",
-    "compile": "tsc -p ./",
-    "clean": "rm -r out/ media/",
-    "watch": "webpack --watch --env.development",
-    "test": "node ./out/test/runTests.js",
-    "build:prod": "webpack --env.production"
-  },
-  "devDependencies": {
-    "@types/chai": "^4.1.4",
-    "@types/debounce": "^3.0.0",
-    "@types/express": "4.11.1",
-    "@types/glob": "7.1.1",
-    "@types/graphql": "^14.0.5",
-    "@types/keytar": "^4.0.1",
-    "@types/lru-cache": "^5.1.0",
-    "@types/marked": "^0.7.2",
-    "@types/mocha": "^5.2.2",
-    "@types/node": "^12.0.0",
-    "@types/node-fetch": "^2.1.4",
-    "@types/query-string": "^6.1.1",
-    "@types/react": "^16.8.4",
-    "@types/react-dom": "^16.8.2",
-    "@types/sinon": "7.0.11",
-    "@types/temp": "0.8.34",
-    "@types/uuid": "^3.4.3",
-    "@types/webpack": "^4.41.6",
-    "css-loader": "^3.4.2",
-    "glob": "7.1.6",
-    "jsdom": "16.2.0",
-    "jsdom-global": "3.0.2",
-    "minimist": "^1.2.3",
-    "mkdirp": "0.5.1",
-    "mocha": "^7.0.1",
-    "mocha-junit-reporter": "1.23.0",
-    "mocha-multi-reporters": "1.1.7",
-    "react": "^16.12.0",
-    "react-dom": "^16.12.0",
-    "react-testing-library": "7.0.1",
-    "sinon": "9.0.0",
-    "source-map-support": "0.5.16",
-    "style-loader": "^1.1.3",
-    "svg-inline-loader": "^0.8.2",
-    "temp": "0.9.1",
-    "ts-loader": "^6.2.1",
-    "tslint": "^6.0.0",
-    "tslint-webpack-plugin": "^2.1.0",
-    "tty": "1.0.1",
-    "typescript": "^3.8.3",
-    "vscode-test": "^1.3.0",
-    "webpack": "^4.41.6",
-    "webpack-cli": "^3.3.12"
-  },
-  "dependencies": {
-    "@octokit/rest": "^16.21.0",
-    "apollo-boost": "^0.1.22",
-    "apollo-link-context": "^1.0.12",
-    "debounce": "^1.2.0",
-    "es6-promise": "^4.2.5",
-    "events": "^3.0.0",
-    "git-credential-node": "^1.1.0",
-    "graphql": "^14.0.2",
-    "js-base64": "^2.5.2",
-    "lru-cache": "^5.1.1",
-    "marked": "^0.8.0",
-    "moment": "^2.22.1",
-    "monday-sdk-js": "0.1.0",
-    "node-emoji": "^1.8.1",
-    "node-fetch": "3.0.0-beta.7",
-    "query-string": "^6.2.0",
-    "ssh-config": "^2.0.0-alpha.3",
-    "tunnel": "0.0.6",
-    "uuid": "^3.3.3",
-    "vscode-extension-telemetry": "^0.1.6",
-    "vsls": "^0.3.967"
-  },
-  "optionalDependencies": {
-    "spawn-sync": "^2.0.0"
-  },
-  "resolutions": {
-    "webpack/**/tar": "^4.4.2"
-  },
-  "license": "MIT"
 }
