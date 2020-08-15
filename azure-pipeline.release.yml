@@ -32,6 +32,8 @@ jobs:
 
   - script: yarn release
     displayName: Create version
+    env:
+     GH_TOKEN: $(GH_TOKEN)
 
   - script: vsce publish -p "$TOKEN" --yarn --noVerify
     displayName: Publish
