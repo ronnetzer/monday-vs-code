@@ -30,6 +30,9 @@ jobs:
 #       DESCRIPTION: Nightly Build Monday VSCode Extension
 #       PUBLISHER: Netzer
 
+  - script: yarn release
+    displayName: Create version
+
   - script: vsce publish -p "$TOKEN" --yarn --noVerify
     displayName: Publish
     env:
