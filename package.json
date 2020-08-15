@@ -266,7 +266,7 @@
         ]
     },
     "scripts": {
-        "release": "npx node-env-run --exec \"semantic-release\"",
+        "release": "semantic-release",
         "adjust-version": "rjp package.json version $VERSION",
         "vscode:prepublish": "webpack --env.production",
         "postinstall": "cd src/typings && npx vscode-dts master",
