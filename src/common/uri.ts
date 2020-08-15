@@ -6,7 +6,6 @@
 'use strict';
 
 import { Uri, UriHandler, EventEmitter } from 'vscode';
-import { Repository } from '../api/api';
 import * as pathUtils from 'path';
 
 export interface ReviewUriParams {
@@ -51,29 +50,29 @@ export const EMPTY_IMAGE_URI = Uri.parse(
     `data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==`,
 );
 
-export async function asImageDataURI(uri: Uri, repository: Repository): Promise<Uri | undefined> {
-    try {
-        const { commit, baseCommit, headCommit, isBase } = JSON.parse(uri.query);
-        const ref = uri.scheme === 'review' ? commit : isBase ? baseCommit : headCommit;
-        const { size, object } = await repository.getObjectDetails(ref, uri.fsPath);
-        const { mimetype } = await repository.detectObjectType(object);
+// export async function asImageDataURI(uri: Uri, repository: Repository): Promise<Uri | undefined> {
+//     try {
+//         const { commit, baseCommit, headCommit, isBase } = JSON.parse(uri.query);
+//         const ref = uri.scheme === 'review' ? commit : isBase ? baseCommit : headCommit;
+//         const { size, object } = await repository.getObjectDetails(ref, uri.fsPath);
+//         const { mimetype } = await repository.detectObjectType(object);
 
-        if (mimetype === 'text/plain') {
-            return;
-        }
+//         if (mimetype === 'text/plain') {
+//             return;
+//         }
 
-        if (ImageMimetypes.indexOf(mimetype) > -1) {
-            const contents = await repository.buffer(ref, uri.fsPath);
-            return Uri.parse(
-                `data:${mimetype};label:${pathUtils.basename(
-                    uri.fsPath,
-                )};description:${ref};size:${size};base64,${contents.toString('base64')}`,
-            );
-        }
-    } catch (err) {
-        return;
-    }
-}
+//         if (ImageMimetypes.indexOf(mimetype) > -1) {
+//             const contents = await repository.buffer(ref, uri.fsPath);
+//             return Uri.parse(
+//                 `data:${mimetype};label:${pathUtils.basename(
+//                     uri.fsPath,
+//                 )};description:${ref};size:${size};base64,${contents.toString('base64')}`,
+//             );
+//         }
+//     } catch (err) {
+//         return;
+//     }
+// }
 
 export function toReviewUri(
     uri: Uri,

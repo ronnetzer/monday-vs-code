@@ -139,6 +139,18 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "boards",
+        "when": "Authenticated == false",
+        "contents": "You have not yet signed in with Monday\n[Sign in](command:auth.login)"
+      },
+      {
+        "view": "users",
+        "when": "Authenticated == false",
+        "contents": "You have not yet signed in with Monday\n[Sign in](command:auth.login)"
+      }
+    ],
     "views": {
       "monday": [
         {
@@ -182,14 +194,17 @@
     "commands": [
       {
         "command": "boards.refresh",
-        "title": "Refresh",
-        "icon": "$(refresh)"
+        "title": "Refresh Boards",
+        "icon": "$(refresh)",
+        "enablement": "Authenticated == true",
+        "category": "Monday"
       },
       {
         "command": "users.refresh",
-        "title": "Refresh",
+        "title": "Refresh Users",
         "icon": "$(refresh)",
-        "category": "Monday"
+        "category": "Monday",
+        "enablement": "Authenticated == true"
       },
       {
         "command": "boards.setDefault",

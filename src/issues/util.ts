@@ -13,7 +13,6 @@ import * as path from 'path';
 // import { PullRequestModel } from '../github/pullRequestModel';
 import { StateManager } from './stateManager';
 // import { ReviewManager } from '../view/reviewManager';
-import { Repository, GitAPI, Remote, Commit, Ref } from '../typings/git';
 import { User, Team } from 'monday-sdk-js';
 
 export const ISSUE_EXPRESSION = /(([^\s]+)\/([^\s]+))?(#)([1-9][0-9]*)($|[\s:;\-(=)])/;
@@ -132,10 +131,10 @@ function convertHexToRgb(hex: string): { r: number; g: number; b: number } | und
     const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
         ? {
-              r: parseInt(result[1], 16),
-              g: parseInt(result[2], 16),
-              b: parseInt(result[3], 16),
-          }
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16),
+        }
         : undefined;
 }
 
@@ -287,14 +286,14 @@ export interface NewIssue {
     range: vscode.Range | vscode.Selection;
 }
 
-function getRepositoryForFile(gitAPI: GitAPI, file: vscode.Uri): Repository | undefined {
-    for (const repository of gitAPI.repositories) {
-        if (file.path.toLowerCase().startsWith(repository.rootUri.path.toLowerCase())) {
-            return repository;
-        }
-    }
-    return undefined;
-}
+// function getRepositoryForFile(gitAPI: GitAPI, file: vscode.Uri): Repository | undefined {
+//     for (const repository of gitAPI.repositories) {
+//         if (file.path.toLowerCase().startsWith(repository.rootUri.path.toLowerCase())) {
+//             return repository;
+//         }
+//     }
+//     return undefined;
+// }
 
 const HEAD = 'HEAD';
 const UPSTREAM = 1;
@@ -307,64 +306,64 @@ const REMOTE_CONVENTIONS = new Map([
     ['origin', ORIGIN],
 ]);
 
-async function getUpstream(repository: Repository, commit: Commit): Promise<Remote | undefined> {
-    const currentRemoteName: string | undefined =
-        repository.state.HEAD?.upstream && !REMOTE_CONVENTIONS.has(repository.state.HEAD.upstream.remote)
-            ? repository.state.HEAD.upstream.remote
-            : undefined;
-    let currentRemote: Remote | undefined;
-    // getBranches is slow if we don't pass a very specific pattern
-    // so we can't just get all branches then filter/sort.
-    // Instead, we need to create parameters for getBranches such that there is only ever on possible return value,
-    // which makes it much faster.
-    // To do this, create very specific remote+branch patterns to look for and sort from "best" to "worst".
-    // Then, call getBranches with each pattern until one of them succeeds.
-    const remoteNames: { name: string; remote?: Remote }[] = repository.state.remotes
-        .map((remote) => {
-            return { name: remote.name, remote };
-        })
-        .filter((value) => {
-            // While we're already here iterating through all values, find the current remote for use later.
-            if (value.name === currentRemoteName) {
-                currentRemote = value.remote;
-            }
-            return REMOTE_CONVENTIONS.has(value.name);
-        })
-        .sort((a, b): number => {
-            const aVal = REMOTE_CONVENTIONS.get(a.name) ?? OTHER;
-            const bVal = REMOTE_CONVENTIONS.get(b.name) ?? OTHER;
-            return aVal - bVal;
-        });
+// async function getUpstream(repository: Repository, commit: Commit): Promise<Remote | undefined> {
+//     const currentRemoteName: string | undefined =
+//         repository.state.HEAD?.upstream && !REMOTE_CONVENTIONS.has(repository.state.HEAD.upstream.remote)
+//             ? repository.state.HEAD.upstream.remote
+//             : undefined;
+//     let currentRemote: Remote | undefined;
+//     // getBranches is slow if we don't pass a very specific pattern
+//     // so we can't just get all branches then filter/sort.
+//     // Instead, we need to create parameters for getBranches such that there is only ever on possible return value,
+//     // which makes it much faster.
+//     // To do this, create very specific remote+branch patterns to look for and sort from "best" to "worst".
+//     // Then, call getBranches with each pattern until one of them succeeds.
+//     const remoteNames: { name: string; remote?: Remote }[] = repository.state.remotes
+//         .map((remote) => {
+//             return { name: remote.name, remote };
+//         })
+//         .filter((value) => {
+//             // While we're already here iterating through all values, find the current remote for use later.
+//             if (value.name === currentRemoteName) {
+//                 currentRemote = value.remote;
+//             }
+//             return REMOTE_CONVENTIONS.has(value.name);
+//         })
+//         .sort((a, b): number => {
+//             const aVal = REMOTE_CONVENTIONS.get(a.name) ?? OTHER;
+//             const bVal = REMOTE_CONVENTIONS.get(b.name) ?? OTHER;
+//             return aVal - bVal;
+//         });
 
-    if (currentRemoteName) {
-        remoteNames.push({ name: currentRemoteName, remote: currentRemote });
-    }
+//     if (currentRemoteName) {
+//         remoteNames.push({ name: currentRemoteName, remote: currentRemote });
+//     }
 
-    const branchNames = [HEAD];
-    if (repository.state.HEAD?.name && repository.state.HEAD.name !== HEAD) {
-        branchNames.unshift(repository.state.HEAD?.name);
-    }
-    let bestRef: Ref | undefined;
-    let bestRemote: Remote | undefined;
-    for (let branchIndex = 0; branchIndex < branchNames.length && !bestRef; branchIndex++) {
-        for (let remoteIndex = 0; remoteIndex < remoteNames.length && !bestRef; remoteIndex++) {
-            const remotes = (
-                await repository.getBranches({
-                    contains: commit.hash,
-                    remote: true,
-                    pattern: `remotes/${remoteNames[remoteIndex].name}/${branchNames[branchIndex]}`,
-                    count: 1,
-                })
-            ).filter((value) => value.remote && value.name);
-            if (remotes && remotes.length > 0) {
-                bestRef = remotes[0];
-                bestRemote = remoteNames[remoteIndex].remote;
-            }
-        }
-    }
+//     const branchNames = [HEAD];
+//     if (repository.state.HEAD?.name && repository.state.HEAD.name !== HEAD) {
+//         branchNames.unshift(repository.state.HEAD?.name);
+//     }
+//     let bestRef: Ref | undefined;
+//     let bestRemote: Remote | undefined;
+//     for (let branchIndex = 0; branchIndex < branchNames.length && !bestRef; branchIndex++) {
+//         for (let remoteIndex = 0; remoteIndex < remoteNames.length && !bestRef; remoteIndex++) {
+//             const remotes = (
+//                 await repository.getBranches({
+//                     contains: commit.hash,
+//                     remote: true,
+//                     pattern: `remotes/${remoteNames[remoteIndex].name}/${branchNames[branchIndex]}`,
+//                     count: 1,
+//                 })
+//             ).filter((value: any) => value.remote && value.name);
+//             if (remotes && remotes.length > 0) {
+//                 bestRef = remotes[0];
+//                 bestRemote = remoteNames[remoteIndex].remote;
+//             }
+//         }
+//     }
 
-    return bestRemote;
-}
+//     return bestRemote;
+// }
 
 // export async function createGithubPermalink(
 //     gitAPI: GitAPI,
