@@ -93,12 +93,30 @@ export class MondayKit {
                     const { url, method } = req;
                     if (method === 'GET' && url?.includes('/oauth/callback')) {
                         const params = parse(url, true).query;
+                        const projectUrl = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
-                        // TODO: create a proper auth success page?
                         res.end(`
-						Successful Authentication! </br>
-						Go back to your IDE and start creating items from your VSC :D
-					`);
+                        <!DOCTYPE html>
+                        <html lang="en">
+
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>Monday VS Code Extension</title>
+                        </head>
+
+                        <body>
+                            Authenticated Successfully! 🤙 </br>
+                            <button onclick="backToWorkspace()">Back to workspace</button>
+                            <script>
+                                function backToWorkspace() {
+                                    window.location.href = "vscode://file/${projectUrl}"
+                                };
+                            </script>
+                        </body>
+
+                        </html>
+					    `);
 
                         const accessInfo = await this.acquireToken(params.code as string);
                         this.handleAcquiredToken(accessInfo);

@@ -101,16 +101,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
     vscode.window.registerTreeDataProvider('users', usersProvider);
 
     Logger.appendLine(`Found default board: ${selectedBoard}`);
-    // const prTree = new PullRequestsTreeDataProvider(telemetry);
-    // context.subscriptions.push(prTree);
 
-    Logger.appendLine(`Found default board: ${selectedBoard.id}`);
-
-    // if (selectedRepository) {
     await init(context, mondayCredentialStore, boardsManager, usersManager, itemsManager);
-    // } else {
-    // 	onceEvent(apiImpl.onDidOpenRepository)(r => init(context, mondayCredentialStore, apiImpl, gitAPI, credentialStore, r, prTree, liveshareApiPromise));
-    // }
 
     return mondayCredentialStore.getApi();
 }
