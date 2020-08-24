@@ -63,6 +63,7 @@ export class CredentialStore {
     }
 
     public async logout(): Promise<void> {
+        this._telemetry.sendTelemetryEvent('auth.logout');
         this._mondayAPI?.setSession();
     }
 
@@ -75,7 +76,7 @@ export class CredentialStore {
         let retry = true;
         while (retry) {
             try {
-                await this.initialize();
+                await this._mondayAPI.login();
             } catch (e) {
                 Logger.appendLine(`Error signing in to Monday: ${e}`);
                 if (e instanceof Error && e.stack) {

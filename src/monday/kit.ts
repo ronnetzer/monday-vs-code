@@ -31,7 +31,8 @@ const OAUTH_URI = `https://auth.monday.com/oauth2/authorize?client_id=${CLIENT_I
 const CLIENT_SECRET = 'c354ecd321c6eda34392fd30de4205e6';
 const TOKEN_URI = 'https://auth.monday.com/oauth2/token';
 
-// https://auth.monday.com/oauth2/authorize?client_id=ed8c61ed38205f088d7a499d63a52f56&redirect_uri=http://localhost:3000/oauth/callback&scope=me:read%20boards:read%20boards:write%20notifications:write%20teams:read
+const _onSessionDidChanged = new vscode.EventEmitter<MondaySession | undefined>();
+export const onSessionDidChanged: vscode.Event<MondaySession | undefined> = _onSessionDidChanged.event;
 
 export class MondayKit {
     #redirectUriInstance: http.Server | undefined;
@@ -46,7 +47,6 @@ export class MondayKit {
 
         if (!session || !session.access_token || this.isExpired(session.refresh_token_expiration_date)) {
             this.setSession(undefined);
-            await this.login();
         } else if (this.isExpired(session.access_token_expiration_date)) {
             const accessInfo = await this.refreshToken(session.refresh_token);
             this.handleAcquiredToken(accessInfo);
@@ -62,6 +62,8 @@ export class MondayKit {
     }
 
     public setSession(session?: MondaySession): void {
+        vscode.commands.executeCommand('setContext', 'Authenticated', !!session?.access_token);
+        _onSessionDidChanged.fire(session);
         if (session) {
             this.sdk?.setToken(session.access_token);
             vscode.window.showInformationMessage('Monday VS Code Extension - Logged In! :D');
@@ -79,7 +81,7 @@ export class MondayKit {
         return !!session && !this.isExpired(session.access_token_expiration_date);
     }
 
-    private async login() {
+    public async login() {
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 this.shutdownRedirectServer();
@@ -93,12 +95,29 @@ export class MondayKit {
                     const { url, method } = req;
                     if (method === 'GET' && url?.includes('/oauth/callback')) {
                         const params = parse(url, true).query;
+                        const projectUrl = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
-                        // TODO: create a proper auth success page?
                         res.end(`
-						Successful Authentication! </br>
-						Go back to your IDE and start creating items from your VSC :D
-					`);
+                        <!DOCTYPE html>
+                        <html lang="en">
+
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>Monday VS Code Extension</title>
+                        </head>
+
+                        <body>
+                            Authenticated Successfully! 🤙 </br>
+                            <script>
+                            window.onload = function() {
+                                window.location.href = "vscode://file/${projectUrl}"
+                              };
+                            </script>
+                        </body>
+
+                        </html>
+					    `);
 
                         const accessInfo = await this.acquireToken(params.code as string);
                         this.handleAcquiredToken(accessInfo);

@@ -22,7 +22,7 @@ This extension allows you to review and manage Monday Projects, Boards and Items
 It's easy to get started with Monday VSCode Extension. Simply follow these steps to get started.
 
 1. Install the application on your Monday account
-[![](https://dapulse-res.cloudinary.com/image/upload/f_auto,q_auto/remote_mondaycom_static/uploads/Tal/4b5d9548-0598-436e-a5b6-9bc5f29ee1d9_Group12441.png)](https://auth.monday.com/oauth2/authorize?client_id=ed8c61ed38205f088d7a499d63a52f56&response_type=install)
+[![](https://dapulse-res.cloudinary.com/image/upload/f_auto,q_auto,w_150/remote_mondaycom_static/uploads/Tal/4b5d9548-0598-436e-a5b6-9bc5f29ee1d9_Group12441.png)](https://auth.monday.com/oauth2/authorize?client_id=ed8c61ed38205f088d7a499d63a52f56&response_type=install)
 1. Download the extension from [the marketplace](https://marketplace.visualstudio.com/items?itemName=Netzer.monday-vscode-extension).
 1. Reload VS Code after the installation (click the reload button next to the extension).
 1. Authenticate the extension with the application from VS Code.
