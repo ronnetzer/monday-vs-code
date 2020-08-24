@@ -1,5 +1,5 @@
 import { ITelemetry } from '../common/telemetry';
-import { MondaySDK, Item, Tag, UserPreview, Board } from 'monday-sdk-js';
+import { MondaySDK, Item, Tag, UserPreview, Board, Group } from 'monday-sdk-js';
 import { BoardsManager } from './boardsManager';
 import Logger from '../common/logger';
 
@@ -30,7 +30,7 @@ export class ItemsManager {
         return this.sdk.api<ItemResponse>(this.ItemsQuery(), '').then((res) => res.data.items);
     }
 
-    async getItem(id: number): Promise<Item> {
+    async getItem(id: string): Promise<Item> {
         return this.sdk.api<ItemResponse>(this.ItemsQuery([id]), '').then((res) => res.data.items[0]);
     }
 
@@ -44,14 +44,15 @@ export class ItemsManager {
         ]).then(([boardTags, publicTags]) => [...boardTags, ...publicTags]);
     }
 
-    async createItem(title: string, board?: Board): Promise<Item & { board: { id: string } }> {
+    async createItem(title: string, board?: Board, group?: Group): Promise<Item & { board: { id: string } }> {
         const boardId = board ? board.id : this.boardsManager.defaultBoard.id;
-        return await this.sdk.api<CreateItemResponse>(this.createItemQuery(boardId, title), '').then((res) => {
+        const groupId = group ? group.id : this.boardsManager.defaultBoard.groups[0]?.id;
+        return await this.sdk.api<CreateItemResponse>(this.createItemQuery(title, boardId, groupId), '').then((res) => {
             return res.data.create_item;
         });
     }
 
-    private boardTagsQuery(ids: number[]): string {
+    private boardTagsQuery(ids: string[]): string {
         return `{
 			boards(ids: [${ids.join(', ')}]) ${this.publicTagsQuery()}
 		}`;
@@ -71,9 +72,9 @@ export class ItemsManager {
      *
      * @returns newly created item id
      */
-    private createItemQuery(boardId: number, title: string): string {
+    private createItemQuery(title: string, boardId: string, groupId?: string): string {
         return `mutation {
-					create_item (board_id: ${boardId}, item_name: "${title}") {
+					create_item (board_id: ${boardId}, ${groupId ? `group_id: ${groupId},` : ``} item_name: "${title}") {
 						id,
 						subscribers { id },
 						name,
@@ -90,7 +91,7 @@ export class ItemsManager {
 				}`;
     }
 
-    private ItemsQuery(ids?: number[]): string {
+    private ItemsQuery(ids?: string[]): string {
         return `{
 			items ${ids ? `(ids: [${ids.join(', ')}])` : ``} {
 				${this.itemsModelQuery()}
@@ -105,7 +106,10 @@ export class ItemsManager {
 			state
 			creator_id
 			created_at
-			updated_at
+            updated_at
+            board {
+                id
+            }
 			group {
 				id
 				title

@@ -47,7 +47,7 @@ export class UsersManager {
         return await this.sdk.api<{ me: Required<User> }>(this.currentUserQuery(), '').then((res) => res.data.me);
     }
 
-    async getUserDetails(ids: number[]): Promise<UserDetails> {
+    async getUserDetails(ids: string[]): Promise<UserDetails> {
         const userDetailsQuery = this.userDetailsQuery(ids);
         const userDetailsRes = await this.sdk.api<UserResponse<UserDetails>>(userDetailsQuery, '');
         const userDetails = userDetailsRes.data.users[0];
@@ -95,16 +95,24 @@ export class UsersManager {
 		}`;
     }
 
-    private userDetailsQuery(ids: number[]) {
+    private userDetailsQuery(ids: string[]) {
         return `{
 			users(ids: [${ids.join(', ')}]) {
+                name
+                id
+                email
 				join_date
-				photo_thumb_small
+                photo_thumb_small
+                location
 				title
 				url
 				teams {
 					id
 					name
+                }
+                account {
+					name
+					id
 				}
 				is_guest
 			}

@@ -6,13 +6,13 @@
 import * as vscode from 'vscode';
 import {
     ISSUE_OR_URL_EXPRESSION,
-    ParsedIssue,
     parseIssueExpressionOutput,
     issueMarkdown,
     shouldShowHover,
 } from './util';
 import { StateManager } from './stateManager';
 import { ITelemetry } from '../common/telemetry';
+import { Item, ItemPreview } from 'monday-sdk-js';
 
 export class IssueHoverProvider implements vscode.HoverProvider {
     constructor(
@@ -32,10 +32,10 @@ export class IssueHoverProvider implements vscode.HoverProvider {
                 new vscode.Position(wordPosition.start.line, wordPosition.start.character - 1),
                 wordPosition.end,
             );
-            const word = document.getText(wordPosition);
+            const word = document.getText(wordPosition).trim();
             const match = word.match(ISSUE_OR_URL_EXPRESSION);
             const tryParsed = parseIssueExpressionOutput(match);
-            if (tryParsed && match && tryParsed.issueNumber <= this.stateManager.maxIssueNumber) {
+            if (tryParsed && match) {
                 return this.createHover(match[0], tryParsed, wordPosition);
             }
         } else {
@@ -45,22 +45,24 @@ export class IssueHoverProvider implements vscode.HoverProvider {
 
     private async createHover(
         value: string,
-        parsed: ParsedIssue,
+        parsed: ItemPreview,
         range: vscode.Range,
     ): Promise<vscode.Hover | undefined> {
-        // const issue = await getIssue(this.stateManager, this.manager, value, parsed);
-        // if (issue) {
+        const item = await this.getIssue(value, parsed);
+        if (item) {
         /* __GDPR__
 				"issue.issueHover" : {}
 			*/
-        //     this.telemetry.sendTelemetryEvent('issues.issueHover');
-        //     return new vscode.Hover(issueMarkdown(issue, this.context, parsed.commentNumber), range);
-        // } else {
-        //     return;
-        // }
+            this.telemetry.sendTelemetryEvent('issues.issueHover');
+            const itemCreator = await this.stateManager.usersManager.getUserDetails([item.creator_id]);
+            const hover = new vscode.Hover(issueMarkdown(item, itemCreator, this.context), range);
+            return hover;
+        } else {
+            return;
+        }
+    }
 
-        // TODO: handle hover creation on issues.
-        console.log(value, parsed, range);
-        return;
+    private async getIssue(value: string, parsed: ItemPreview): Promise<Item> {
+        return this.stateManager.itemsManager.getItem(parsed?.id || value);
     }
 }

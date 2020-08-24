@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { UserHoverProvider } from './userHoverProvider';
 import { IssueTodoProvider } from './issueTodoProvider';
 import { IssueCompletionProvider } from './issueCompletionProvider';
-import { NewIssue, USER_EXPRESSION, ISSUES_CONFIGURATION } from './util';
+import { NewIssue, USER_EXPRESSION, ISSUES_CONFIGURATION, createItemUrl } from './util';
 import { UserCompletionProvider } from './userCompletionProvider';
 import { StateManager } from './stateManager';
 import { Resource } from '../common/resources';
@@ -24,6 +24,8 @@ import { BoardsManager } from '../monday/boardsManager';
 import { UsersManager } from '../monday/usersManager';
 import { CredentialStore } from '../monday/credentials';
 import { ItemsManager } from '../monday/ItemsManager';
+import { GroupTreeItem } from '../views/boards';
+import { IssueHoverProvider } from './issueHoverProvider';
 
 const ISSUE_COMPLETIONS_CONFIGURATION = 'issueCompletions.enabled';
 const USER_COMPLETIONS_CONFIGURATION = 'userCompletions.enabled';
@@ -50,6 +52,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
         this._stateManager = new StateManager(
             this.credentialStore,
             this.boardsManager,
+            this.itemsManager,
             this.usersManager,
             this.telemetry,
             this.context,
@@ -261,12 +264,13 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
         this.context.subscriptions.push(
             vscode.commands.registerCommand(
                 'issue.createIssue',
-                () => {
+                (group: GroupTreeItem) => {
                     /* __GDPR__
-				"issue.createIssue" : {}
-			*/
-                    this.telemetry.sendTelemetryEvent('issue.createIssue');
-                    return this.createIssue();
+				    "issue.createIssue" : {}
+                    */
+                // TODO: do something with the passed group and group.parent (board)
+                   this.telemetry.sendTelemetryEvent('issue.createIssue');
+                   return this.createIssue();
                 },
                 this,
             ),
@@ -301,7 +305,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
             }),
         );
         return this._stateManager.tryInitializeAndWait().then(() => {
-            // this.context.subscriptions.push(vscode.languages.registerHoverProvider('*', new IssueHoverProvider(this._stateManager, this.context, this.telemetry)));
+            this.context.subscriptions.push(vscode.languages.registerHoverProvider('*', new IssueHoverProvider(this._stateManager, this.context, this.telemetry)));
             this.context.subscriptions.push(
                 vscode.languages.registerHoverProvider(
                     '*',
@@ -394,7 +398,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
                 this.context.subscriptions.push(
                     (element.disposable = vscode.languages.registerCompletionItemProvider(
                         this.documentFilters,
-                        new element.provider(this._stateManager, this.usersManager, this.context),
+                        new element.provider(this._stateManager, this.context),
                         element.trigger,
                     )),
                 );
@@ -414,7 +418,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
                             this.context.subscriptions.push(
                                 (element.disposable = vscode.languages.registerCompletionItemProvider(
                                     this.documentFilters,
-                                    new element.provider(this._stateManager, this.usersManager, this.context),
+                                    new element.provider(this._stateManager, this.context),
                                     element.trigger,
                                 )),
                             );
@@ -687,8 +691,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
         // TODO: add subscribers to Person column if exist
         // TODO: add in the ticket body the file location and the line.
 
-        const account_name_url = this.usersManager.currentUser.account.name.toLowerCase().replace(' ', '-');
-        const html_url = `https://${account_name_url}.monday.com/boards/${issue.board.id}/pulses/${issue.id}`;
+        const html_url =  createItemUrl(issue, this.usersManager.currentUser);
 
         if (issue) {
             if (document !== undefined && insertIndex !== undefined && lineNumber !== undefined) {

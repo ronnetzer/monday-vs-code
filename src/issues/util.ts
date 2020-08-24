@@ -7,14 +7,9 @@
 import * as marked from 'marked';
 import * as vscode from 'vscode';
 import * as path from 'path';
-// import { PullRequestManager, PullRequestDefaults } from '../github/pullRequestManager';
-// import { IssueModel } from '../github/issueModel';
-// import { GithubItemStateEnum } from '../github/interface';
-// import { PullRequestModel } from '../github/pullRequestModel';
-import { StateManager } from './stateManager';
-// import { ReviewManager } from '../view/reviewManager';
 import { Repository, GitAPI, Remote, Commit, Ref } from '../typings/git';
-import { User, Team } from 'monday-sdk-js';
+import { User, Team, Item, ItemPreview, State } from 'monday-sdk-js';
+import { parse } from 'path';
 
 export const ISSUE_EXPRESSION = /(([^\s]+)\/([^\s]+))?(#)([1-9][0-9]*)($|[\s:;\-(=)])/;
 export const ISSUE_OR_URL_EXPRESSION = /(https?:\/\/monday\.com\/(([^\s]+)\/([^\s]+))\/([^\s]+\/)?(pulses)\/([0-9]+)?)|(([^\s]+)\/([^\s]+))?(#)([1-9][0-9]*)($|[\s:;\-(=)])/;
@@ -23,12 +18,6 @@ export const USER_EXPRESSION = /@([^;]+)/;
 
 export const MAX_LINE_LENGTH = 150;
 
-export type ParsedIssue = {
-    owner: string | undefined;
-    name: string | undefined;
-    issueNumber: number;
-    commentNumber?: number;
-};
 export const ISSUES_CONFIGURATION = 'mondayExtension';
 export const QUERIES_CONFIGURATION = 'queries';
 export const DEFAULT_QUERY_CONFIGURATION = 'default';
@@ -36,67 +25,23 @@ export const BRANCH_NAME_CONFIGURATION = 'workingIssueBranch';
 export const BRANCH_CONFIGURATION = 'useBranchForIssues';
 export const SCM_MESSAGE_CONFIGURATION = 'workingIssueFormatScm';
 
-export function parseIssueExpressionOutput(output: RegExpMatchArray | null): ParsedIssue | undefined {
+export function parseIssueExpressionOutput(output: RegExpMatchArray | null): ItemPreview | undefined {
     if (!output) {
         return undefined;
     }
-    const issue: ParsedIssue = { owner: undefined, name: undefined, issueNumber: 0 };
+    const issue: ItemPreview = { name: '', id: '0' };
     if (output.length === 7) {
-        issue.owner = output[2];
         issue.name = output[3];
-        issue.issueNumber = parseInt(output[5]);
+        issue.id = output[5];
         return issue;
-    } else if (output.length === 16) {
-        issue.owner = output[3] || output[11];
-        issue.name = output[4] || output[12];
-        issue.issueNumber = parseInt(output[7] || output[14]);
-        issue.commentNumber = output[9] !== undefined ? parseInt(output[9]) : undefined;
+    } else if (output.length === 14) {
+        issue.name = output[2] || output[10];
+        issue.id = output[5] || output[12];
         return issue;
     } else {
         return undefined;
     }
 }
-
-// export async function getIssue(
-//     stateManager: StateManager,
-//     manager: PullRequestManager,
-//     issueValue: string,
-//     parsed: ParsedIssue,
-// ): Promise<IssueModel | undefined> {
-//     if (stateManager.resolvedIssues.has(issueValue)) {
-//         return stateManager.resolvedIssues.get(issueValue);
-//     } else {
-//         let owner: string | undefined = undefined;
-//         let name: string | undefined = undefined;
-//         let issueNumber: number | undefined = undefined;
-//         const remotes = manager.getGitHubRemotes();
-//         for (const remote of remotes) {
-//             if (!parsed) {
-//                 const tryParse = parseIssueExpressionOutput(issueValue.match(ISSUE_OR_URL_EXPRESSION));
-//                 if (tryParse && (!tryParse.name || !tryParse.owner)) {
-//                     owner = remote.owner;
-//                     name = remote.repositoryName;
-//                 }
-//             } else {
-//                 owner = parsed.owner ? parsed.owner : remote.owner;
-//                 name = parsed.name ? parsed.name : remote.repositoryName;
-//                 issueNumber = parsed.issueNumber;
-//             }
-
-//             if (owner && name && issueNumber !== undefined) {
-//                 let issue = await manager.resolveIssue(owner, name, issueNumber, !!parsed.commentNumber);
-//                 if (!issue) {
-//                     issue = await manager.resolvePullRequest(owner, name, issueNumber);
-//                 }
-//                 if (issue) {
-//                     stateManager.resolvedIssues.set(issueValue, issue);
-//                     return issue;
-//                 }
-//             }
-//         }
-//     }
-//     return undefined;
-// }
 
 export class UserCompletionItem extends vscode.CompletionItem {
     data: User;
@@ -153,131 +98,125 @@ function makeLabel(color: string, text: string): string {
     return `<span style="color:#${textColor};background-color:#${color};">&nbsp;&nbsp;${text}&nbsp;&nbsp;</span>`;
 }
 
-// function findLinksInIssue(body: string, issue: IssueModel): string {
-//     let searchResult = body.search(ISSUE_OR_URL_EXPRESSION);
-//     let position = 0;
-//     while (searchResult >= 0 && searchResult < body.length) {
-//         let newBodyFirstPart: string | undefined;
-//         if (searchResult === 0 || body.charAt(searchResult - 1) !== '&') {
-//             const match = body.substring(searchResult).match(ISSUE_OR_URL_EXPRESSION)!;
-//             const tryParse = parseIssueExpressionOutput(match);
-//             if (tryParse) {
-//                 const issueNumberLabel = getIssueNumberLabelFromParsed(tryParse); // get label before setting owner and name.
-//                 if (!tryParse.owner || !tryParse.name) {
-//                     tryParse.owner = issue.remote.owner;
-//                     tryParse.name = issue.remote.repositoryName;
-//                 }
-//                 newBodyFirstPart =
-//                     body.slice(0, searchResult) +
-//                     `[${issueNumberLabel}](https://github.com/${tryParse.owner}/${tryParse.name}/issues/${tryParse.issueNumber})`;
-//                 body = newBodyFirstPart + body.slice(searchResult + match[0].length);
-//             }
-//         }
-//         position = newBodyFirstPart ? newBodyFirstPart.length : searchResult + 1;
-//         const newSearchResult = body.substring(position).search(ISSUE_OR_URL_EXPRESSION);
-//         searchResult = newSearchResult > 0 ? position + newSearchResult : newSearchResult;
-//     }
-//     return body;
-// }
+function parseAccountName(user: User): string {
+    return user.account?.name.toLowerCase().replace(' ', '-') ?? '';
+}
+
+export function createItemUrl(item: Item, user: User): string {
+    const account = parseAccountName(user);
+    return `https://${account}.monday.com/boards/${item.board.id}/pulses/${item.id}`
+}
+
+function findLinksInIssue(body: string, item: Item, user: User): string {
+    let searchResult = body.search(ISSUE_OR_URL_EXPRESSION);
+    let position = 0;
+    while (searchResult >= 0 && searchResult < body.length) {
+        let newBodyFirstPart: string | undefined;
+        if (searchResult === 0 || body.charAt(searchResult - 1) !== '&') {
+            const match = body.substring(searchResult).match(ISSUE_OR_URL_EXPRESSION)!;
+            const tryParse = parseIssueExpressionOutput(match);
+            if (tryParse) {
+                const issueNumberLabel = getItemNumberLabel(tryParse); // get label before setting owner and name.
+                newBodyFirstPart =
+                    body.slice(0, searchResult) +
+                    `[${issueNumberLabel}](${createItemUrl(item, user)}})`;
+                body = newBodyFirstPart + body.slice(searchResult + match[0].length);
+            }
+        }
+        position = newBodyFirstPart ? newBodyFirstPart.length : searchResult + 1;
+        const newSearchResult = body.substring(position).search(ISSUE_OR_URL_EXPRESSION);
+        searchResult = newSearchResult > 0 ? position + newSearchResult : newSearchResult;
+    }
+    return body;
+}
 
 export const ISSUE_BODY_LENGTH = 200;
-export function issueMarkdown(
-    issue: any,
+export function  issueMarkdown(
+    item: Item,
+    user: User,
     context: vscode.ExtensionContext,
     commentNumber?: number,
 ): vscode.MarkdownString {
     const markdown: vscode.MarkdownString = new vscode.MarkdownString(undefined, true);
     markdown.isTrusted = true;
-    const date = new Date(issue.createdAt);
-    const ownerName = `${issue.remote.owner}/${issue.remote.repositoryName}`;
+    const date = new Date(item.created_at);
     markdown.appendMarkdown(
-        `[${ownerName}](https://github.com/${ownerName}) on ${date.toLocaleString('default', {
+        `[${user.name}](${user.url}) on ${date.toLocaleString('default', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
         })}  \n`,
     );
     const title = marked
-        .parse(issue.title, {
+        .parse(item.name, {
             renderer: new PlainTextRenderer(),
         })
         .trim();
-    // markdown.appendMarkdown(
-    //     `${getIconMarkdown(issue, context)} **${title}** [#${issue.number}](${issue.html_url})  \n`,
-    // );
-    let body = marked.parse(issue.body, {
+    markdown.appendMarkdown(
+        `${getIconMarkdown(item, context)} **${title}** [#${item.id}](${createItemUrl(item, user)})  \n`,
+    );
+
+    // TODO: get item description from column value
+    let body = marked.parse(/* item.body */ '', {
         renderer: new PlainTextRenderer(),
     });
     markdown.appendMarkdown('  \n');
     body = body.length > ISSUE_BODY_LENGTH ? body.substr(0, ISSUE_BODY_LENGTH) + '...' : body;
-    // body = findLinksInIssue(body, issue);
+    body = findLinksInIssue(body, item, user);
 
     markdown.appendMarkdown(body + '  \n');
     markdown.appendMarkdown('&nbsp;  \n');
 
-    if (issue.item.labels.length > 0) {
-        issue.item.labels.forEach((label: any) => {
-            markdown.appendMarkdown(
-                `[${makeLabel(label.color, label.name)}](https://github.com/${ownerName}/labels/${encodeURIComponent(
-                    label.name,
-                )}) `,
-            );
-        });
-    }
+    // TODO: add tags from column value
+    // if (item.labels.length > 0) {
+    //     item.item.labels.forEach((label: any) => {
+    //         markdown.appendMarkdown(
+    //             `[${makeLabel(label.color, label.name)}](https://github.com/${ownerName}/labels/${encodeURIComponent(
+    //                 label.name,
+    //             )}) `,
+    //         );
+    //     });
+    // }
 
-    if (issue.item.comments && commentNumber) {
-        for (const comment of issue.item.comments) {
-            if (comment.databaseId === commentNumber) {
-                markdown.appendMarkdown('  \r\n\r\n---\r\n');
-                markdown.appendMarkdown('&nbsp;  \n');
-                markdown.appendMarkdown(
-                    `![Avatar](${comment.author.avatarUrl}|height=15,width=15) &nbsp;&nbsp;**${comment.author.login}** commented`,
-                );
-                markdown.appendMarkdown('&nbsp;  \n');
-                const commentText = marked.parse(
-                    comment.body.length > ISSUE_BODY_LENGTH
-                        ? comment.body.substr(0, ISSUE_BODY_LENGTH) + '...'
-                        : comment.body,
-                    { renderer: new PlainTextRenderer() },
-                );
-                // commentText = findLinksInIssue(commentText, issue);
-                markdown.appendMarkdown(commentText);
-            }
-        }
-    }
+    //  TODO: add item updates
+    // if (item.item.comments && commentNumber) {
+    //     for (const comment of item.item.comments) {
+    //         if (comment.databaseId === commentNumber) {
+    //             markdown.appendMarkdown('  \r\n\r\n---\r\n');
+    //             markdown.appendMarkdown('&nbsp;  \n');
+    //             markdown.appendMarkdown(
+    //                 `![Avatar](${comment.author.avatarUrl}|height=15,width=15) &nbsp;&nbsp;**${comment.author.login}** commented`,
+    //             );
+    //             markdown.appendMarkdown('&nbsp;  \n');
+    //             const commentText = marked.parse(
+    //                 comment.body.length > ISSUE_BODY_LENGTH
+    //                     ? comment.body.substr(0, ISSUE_BODY_LENGTH) + '...'
+    //                     : comment.body,
+    //                 { renderer: new PlainTextRenderer() },
+    //             );
+    //             // commentText = findLinksInIssue(commentText, issue);
+    //             markdown.appendMarkdown(commentText);
+    //         }
+    //     }
+    // }
     return markdown;
 }
 
-// function getIconString(issue: IssueModel) {
-//     switch (issue.state) {
-//         case GithubItemStateEnum.Open: {
-//             return issue instanceof PullRequestModel ? '$(git-pull-request)' : '$(issues)';
-//         }
-//         case GithubItemStateEnum.Closed: {
-//             return issue instanceof PullRequestModel ? '$(git-pull-request)' : '$(issue-closed)';
-//         }
-//         case GithubItemStateEnum.Merged:
-//             return '$(git-merge)';
-//     }
-// }
+function getIconMarkdown(item: Item, context: vscode.ExtensionContext) {
+    switch (item.state) {
+        case 'active':
+            return `![Item State](${vscode.Uri.file(
+                context.asAbsolutePath(path.join('resources', 'icons', 'issues-green.svg'))
+            ).toString()})`;
 
-// function getIconMarkdown(issue: IssueModel, context: vscode.ExtensionContext) {
-//     if (issue instanceof PullRequestModel) {
-//         return getIconString(issue);
-//     }
-//     switch (issue.state) {
-//         case GithubItemStateEnum.Open: {
-//             return `![Issue State](${vscode.Uri.file(
-//                 context.asAbsolutePath(path.join('resources', 'icons', 'issues-green.svg')),
-//             ).toString()})`;
-//         }
-//         case GithubItemStateEnum.Closed: {
-//             return `![Issue State](${vscode.Uri.file(
-//                 context.asAbsolutePath(path.join('resources', 'icons', 'issue-closed-red.svg')),
-//             ).toString()})`;
-//         }
-//     }
-// }
+        case 'archived':
+        case 'deleted':
+            return `![Item State](${vscode.Uri.file(
+                context.asAbsolutePath(path.join('resources', 'icons', 'issue-closed-red.svg'))
+            ).toString()})`;
+
+    }
+}
 
 export interface NewIssue {
     document: vscode.TextDocument;
@@ -424,59 +363,37 @@ async function getUpstream(repository: Repository, commit: Commit): Promise<Remo
 // }
 
 const VARIABLE_PATTERN = /\$\{(.*?)\}/g;
-// export async function variableSubstitution(
-//     value: string,
-//     issueModel?: IssueModel,
-//     defaults?: PullRequestDefaults,
-//     user?: string,
-// ): Promise<string> {
-//     return value.replace(VARIABLE_PATTERN, (match: string, variable: string) => {
-//         switch (variable) {
-//             case 'user':
-//                 return user ? user : match;
-//             case 'issueNumber':
-//                 return issueModel ? `${issueModel.number}` : match;
-//             case 'issueNumberLabel':
-//                 return issueModel ? `${getIssueNumberLabel(issueModel, defaults)}` : match;
-//             case 'issueTitle':
-//                 return issueModel ? issueModel.title : match;
-//             case 'repository':
-//                 return defaults ? defaults.repo : match;
-//             case 'owner':
-//                 return defaults ? defaults.owner : match;
-//             case 'sanitizedIssueTitle':
-//                 return issueModel
-//                     ? issueModel.title
-//                           .replace(/[~^:?*[\]@\\{}]|\/\//g, '')
-//                           .trim()
-//                           .replace(/\s+/g, '-')
-//                     : match; // check what characters are permitted
-//             default:
-//                 return match;
-//         }
-//     });
-// }
+export async function variableSubstitution(
+    value: string,
+    issueModel?: Item,
+    user?: string,
+): Promise<string> {
+    return value.replace(VARIABLE_PATTERN, (match: string, variable: string) => {
+        switch (variable) {
+            case 'user':
+                return user ? user : match;
+            case 'issueNumber':
+                return issueModel ? `${issueModel.id}` : match;
+            case 'issueNumberLabel':
+                return issueModel ? `${getItemNumberLabel(issueModel)}` : match;
+            case 'issueTitle':
+                return issueModel ? issueModel.name : match;
+            case 'sanitizedIssueTitle':
+                return issueModel
+                    ? issueModel.name
+                          .replace(/[~^:?*[\]@\\{}]|\/\//g, '')
+                          .trim()
+                          .replace(/\s+/g, '-')
+                    : match; // check what characters are permitted
+            default:
+                return match;
+        }
+    });
+}
 
-// export function getIssueNumberLabel(issue: IssueModel, repo?: PullRequestDefaults) {
-//     const parsedIssue: ParsedIssue = { issueNumber: issue.number, owner: undefined, name: undefined };
-//     if (
-//         repo &&
-//         (repo.owner.toLowerCase() !== issue.remote.owner.toLowerCase() ||
-//             repo.repo.toLowerCase() !== issue.remote.repositoryName.toLowerCase())
-//     ) {
-//         parsedIssue.owner = issue.remote.owner;
-//         parsedIssue.name = issue.remote.repositoryName;
-//     }
-//     return getIssueNumberLabelFromParsed(parsedIssue);
-// }
-
-// function getIssueNumberLabelFromParsed(parsed: ParsedIssue) {
-//     if (!parsed.owner || !parsed.name) {
-//         return `#${parsed.issueNumber}`;
-//     } else {
-//         return `${parsed.owner}/${parsed.name}#${parsed.issueNumber}`;
-//     }
-// }
+export function getItemNumberLabel(item: ItemPreview) {
+    return `#${item.id}`
+}
 
 // async function commitWithDefault(manager: PullRequestManager, stateManager: StateManager, all: boolean) {
 //     const message = await stateManager.currentIssue?.getCommitMessage();

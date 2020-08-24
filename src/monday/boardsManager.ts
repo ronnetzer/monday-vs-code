@@ -67,7 +67,7 @@ export class BoardsManager {
         }
     }
 
-    public async getBoardGroups(boardId: number): Promise<Group[]> {
+    public async getBoardGroups(boardId: string): Promise<Group[]> {
         const response = await this._mondaySDK.api<GroupsResponse>(this.allBoardGroups(boardId), '');
         return response.data.boards[0].groups;
     }
@@ -82,17 +82,21 @@ export class BoardsManager {
 			boards() {
 			name,
 			id,
-			state,
+            state,
+            groups {
+                id
+            },
 			tags {
-			 id,
-			  name
+			    id,
+                name,
+                color
 			},
 			board_kind
 		  }
 		}`;
     }
 
-    private allBoardGroups(boardId: number) {
+    private allBoardGroups(boardId: string) {
         return `{
 			boards(ids: ${boardId}) {
 				groups {

@@ -10,7 +10,7 @@ import { NEW_ISSUE_SCHEME } from './issueFile';
 import { UsersManager } from '../monday/usersManager';
 
 export class UserCompletionProvider implements vscode.CompletionItemProvider {
-    constructor(private stateManager: StateManager, private usersManager: UsersManager) {}
+    constructor(private stateManager: StateManager, private context: vscode.ExtensionContext) {}
 
     async provideCompletionItems(
         document: vscode.TextDocument,
@@ -68,7 +68,7 @@ export class UserCompletionProvider implements vscode.CompletionItemProvider {
 
     async resolveCompletionItem(item: UserCompletionItem): Promise<vscode.CompletionItem> {
         // TODO: get team details if item.data.isTeam
-        const userDetails = item.data.isTeam ? item.data : await this.usersManager.getUserDetails([item.data.id]);
+        const userDetails = item.data.isTeam ? item.data : await this.stateManager.usersManager.getUserDetails([item.data.id]);
         if (userDetails) {
             item.data = { ...item.data, ...userDetails };
             item.documentation = userMarkdown(item.data);

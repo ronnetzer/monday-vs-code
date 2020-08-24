@@ -9,19 +9,19 @@ declare module 'monday-sdk-js' {
         }
 
         export interface Team {
-            id: number;
+            id: string;
             name: string;
             picture_url: string;
         }
 
         export interface UserPreview {
-            id: number;
+            id: string;
             name: string;
             email: string;
             isTeam?: boolean;
         }
 
-        export interface UserDetails {
+        export type UserDetails = UserPreview & {
             photo_thumb_small?: string;
             join_date?: Date;
             url?: string;
@@ -29,7 +29,7 @@ declare module 'monday-sdk-js' {
             title?: string;
             location?: string;
             teams?: Team[];
-            account?: { id: number; name: string };
+            account?: { id: string; name: string };
         }
 
         export type User = UserPreview & UserDetails;
@@ -51,13 +51,15 @@ declare module 'monday-sdk-js' {
 
         export interface Board {
             name: string;
-            id: number;
+            id: string;
             state: State;
+            groups: { id: string }[];
+            tags: Tag[]
             board_kind: BoardKind;
         }
 
         export interface Group {
-            id: number;
+            id: string;
             title: string;
             deleted: boolean;
             archived: boolean;
@@ -67,13 +69,13 @@ declare module 'monday-sdk-js' {
         }
 
         export interface Tag {
-            id: number;
+            id: string;
             name: string;
             color: string;
         }
 
         export interface ItemPreview {
-            id: number;
+            id: string;
             name: string;
         }
 
@@ -83,6 +85,7 @@ declare module 'monday-sdk-js' {
             created_at: string;
             updated_at: string;
             group: Group;
+            board: { id: string };
             subscribers: UserPreview[];
         }
 
