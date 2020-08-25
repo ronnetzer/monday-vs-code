@@ -1,7 +1,8 @@
 import { ITelemetry } from '../common/telemetry';
-import { MondaySDK, Item, Tag, UserPreview, Board, Group } from 'monday-sdk-js';
+import { MondaySDK, Item, Tag } from 'monday-sdk-js';
 import { BoardsManager } from './boardsManager';
 import Logger from '../common/logger';
+import { UsersManager } from './usersManager';
 
 export interface ItemResponse<T = Item> {
     items: T[];
@@ -16,6 +17,7 @@ export class ItemsManager {
         private readonly _telemetry: ITelemetry,
         private readonly sdk: MondaySDK,
         private readonly boardsManager: BoardsManager,
+        private readonly usersManager: UsersManager,
     ) {}
 
     async init(): Promise<Required<void>> {
@@ -44,9 +46,61 @@ export class ItemsManager {
         ]).then(([boardTags, publicTags]) => [...boardTags, ...publicTags]);
     }
 
-    async createItem(title: string, board?: Board, group?: Group): Promise<Item & { board: { id: string } }> {
-        const boardId = board ? board.id : this.boardsManager.defaultBoard.id;
-        const groupId = group ? group.id : this.boardsManager.defaultBoard.groups[0]?.id;
+    // TODO: update sync and creation of tags. that's disgusting btw.
+    // async updateTags(itemId: string, tags: string[], boardId: string) {
+    //     boardId = boardId ? boardId : this.boardsManager.defaultBoard.id;
+
+    // }
+
+    async updateBody(itemId: string, body: string, boardId?: string) {
+        boardId = boardId ? boardId : this.boardsManager.defaultBoard.id;
+        const query = String.raw`
+        mutation {
+            change_column_value (board_id: ${Number(boardId)}, item_id: ${Number(
+            itemId,
+        )}, column_id: "long_text", value: "{\"text\": \"${body}\"}") {
+                id
+            }
+        }`;
+
+        return await this.sdk.api(query, '').then((res) => {
+            return res;
+        });
+    }
+
+    async updateSubscribers(itemId: string, subscribers: string[], boardId?: string) {
+        boardId = boardId ? boardId : this.boardsManager.defaultBoard.id;
+        const promises: Promise<any>[] = [];
+
+        subscribers.forEach((subscriber) => {
+            const user = this.usersManager.findUserByName(subscriber);
+            const kind = user?.isTeam ? 'team' : 'person';
+            const query = String.raw`
+            mutation {
+                change_column_value (board_id: ${Number(boardId)}, item_id: ${Number(
+                itemId,
+            )}, column_id: "person", value: "{\"added_person_or_team\": {\"id\": ${
+                user?.id
+            }, \"kind\": \"${kind}\"}}") {
+                    id
+                }
+            }`;
+
+            const promise = this.sdk.api(query, '').then((res) => {
+                return res;
+            });
+
+            promises.push(promise);
+        });
+
+        return await Promise.all(promises).then((res) => {
+            return res;
+        });
+    }
+
+    async createItem(title: string, boardId?: string, groupId?: string): Promise<Item & { board: { id: string } }> {
+        boardId = boardId ? boardId : this.boardsManager.defaultBoard.id;
+        groupId = groupId ? groupId : this.boardsManager.defaultBoard.groups[0]?.id;
         return await this.sdk.api<CreateItemResponse>(this.createItemQuery(title, boardId, groupId), '').then((res) => {
             return res.data.create_item;
         });

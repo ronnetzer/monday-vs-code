@@ -8,6 +8,7 @@ export interface UserResponse<T = UserPreview> {
 
 export class UsersManager {
     private _currentUser: Required<User>;
+    #users: User[];
 
     constructor(private readonly _telemetry: ITelemetry, private readonly sdk: MondaySDK) {}
 
@@ -26,6 +27,10 @@ export class UsersManager {
         return this._currentUser;
     }
 
+    findUserByName(name: string): UserDetails | undefined {
+        return this.#users.find((user) => user.name === name);
+    }
+
     async getEntries(): Promise<User[]> {
         return await this.sdk.api<UserResponse>(this.allUsersPreviewQuery(), '').then((res) => {
             // if we have 0 boards, throw an error.
@@ -34,7 +39,7 @@ export class UsersManager {
                 this._telemetry.sendTelemetryEvent('users.manager.fail');
                 throw new Error('No users found, something is fishy here');
             }
-
+            this.#users = res.data.users;
             return res.data.users;
         });
     }

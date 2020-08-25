@@ -97,7 +97,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
 
     const boardsManager = new BoardsManager(telemetry, mondayKit.sdk);
     const usersManager = new UsersManager(telemetry, mondayKit.sdk);
-    const itemsManager = new ItemsManager(telemetry, mondayKit.sdk, boardsManager);
+    const itemsManager = new ItemsManager(telemetry, mondayKit.sdk, boardsManager, usersManager);
 
     registerCommands(context, telemetry, mondayCredentialStore, boardsManager, usersManager);
 

@@ -10,6 +10,8 @@ export const NEW_ISSUE_SCHEME = 'newItem';
 export const NEW_ISSUE_FILE = 'NewItem.md';
 export const SUBSCRIBERS = 'Subscribers:';
 export const TAGS = 'Tags:';
+export const BOARD = 'Board:';
+export const GROUP = 'Group:';
 
 export class IssueFileSystemProvider implements vscode.FileSystemProvider {
     private content: Uint8Array | undefined;
