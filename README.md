@@ -4,19 +4,17 @@
 
 This extension allows you to review and manage Monday Projects, Boards and Items directly in VS Code. The support includes:
 - Authenticating and connecting VS Code to Monday.
+![Login Demo](.readme/login.gif)
 - Listing and browsing Boards, Projects, Items and Users from within VS Code.
-- Reviewing Items from within VS Code with in-editor commenting.
-- Terminal integration that enables UI and CLIs to co-exist.
-- Listing and browsing items from within VS Code.
-- Hover cards for "@" mentioned users and for items.
+![create From Sidenav Demo](.readme/createFromSidenav.gif)
+- Hover cards for mentioned users and items.
+![Hover Cards Demo](.readme/hoverCards.gif)
 - Completion suggestions for users and items.
+![autocomplete Demo](.readme/autocompletion.gif)
 - Code actions to create items from "todo" comments.
-
-![Preview Demo](.readme/demo.gif)
-
-![Items Demo](.readme/issueDemo.gif)
-
-![Hover Cards Demo](.readme/hoverCard.gif)
+![Create From Todo Demo](.readme/itemFromTodo.gif)
+- Open items in Monday.com from VS Code.
+![Open In Monday Demo](.readme/openInMonday.gif)
 
 # Getting Started
 It's easy to get started with Monday VSCode Extension. Simply follow these steps to get started.
@@ -35,7 +33,7 @@ There are several settings that can be used to configure the extension.
           "type": "array",
           "items": {
             "type": "string",
-            "description": "String that enables the 'Create issue from comment' code action. Should not container whitespace."
+            "description": "String that enables the 'Create item from comment' code action. Should not container whitespace."
           },
           "default": [
             "TODO",
