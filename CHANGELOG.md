@@ -1,3 +1,19 @@
+# [1.1.0](https://github.com/ronnetzer/monday-vs-code/compare/v1.0.0...v1.1.0) (2020-08-29)
+
+
+### Bug Fixes
+
+* **auth:** auto popup on redireect window ([a2feecc](https://github.com/ronnetzer/monday-vs-code/commit/a2feecc76c66eeb5284106a8cb509ad3abb3de4c))
+
+
+### Features
+
+* **auth:** html page allow redirect back to workspace ([cc67cba](https://github.com/ronnetzer/monday-vs-code/commit/cc67cbaefd11e817d2e606df998f39e7545fb04d))
+* **issues:** add issues completion and hover functionality ([e052325](https://github.com/ronnetzer/monday-vs-code/commit/e052325bc7a1dd89f1f1052849579fc43b1411d4))
+* **items:** subscribers and items and now registered ([def321a](https://github.com/ronnetzer/monday-vs-code/commit/def321aa89a1fc305de8fd95cd97ca0fdd568fbf))
+* **sidebar:** handling session changes and login ([4523c37](https://github.com/ronnetzer/monday-vs-code/commit/4523c3766b87e60c9bb82c384369032c334d2ec7))
+* 🎸 align main flows ([c36ea1f](https://github.com/ronnetzer/monday-vs-code/commit/c36ea1faa353cdbfc43e2213e8d26e2dcbd694e9))
+
 # 1.0.0 (2020-08-15)
 
 
