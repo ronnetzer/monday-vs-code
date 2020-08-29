@@ -75,7 +75,6 @@ export class MondayKit {
         _onSessionDidChanged.fire(session);
         if (session) {
             this.sdk?.setToken(session.access_token);
-            vscode.window.showInformationMessage('Monday VS Code Extension - Logged In! :D');
         }
 
         PersistentState.store('monday', 'session', session);
@@ -104,8 +103,6 @@ export class MondayKit {
                     const { url, method } = req;
                     if (method === 'GET' && url?.includes('/oauth/callback')) {
                         const params = parse(url, true).query;
-                        const projectUrl = vscode.workspace.workspaceFolders![0].uri.fsPath;
-
                         res.end(`
                         <!DOCTYPE html>
                         <html lang="en">
@@ -120,7 +117,8 @@ export class MondayKit {
                             Authenticated Successfully! 🤙 </br>
                             <script>
                             window.onload = function() {
-                                window.location.href = "vscode://file/${projectUrl}"
+                                window.location.href = "vscode://vscode.monday-vscode-extension"
+                                window.close();
                               };
                             </script>
                         </body>

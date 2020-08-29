@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 import { ITelemetry } from '../common/telemetry';
 import { MondaySDK, Board, Group } from 'monday-sdk-js';
 import Logger from '../common/logger';
+import { BoardQuickPickItem } from '../issues/util';
+import { onSessionDidChanged } from './kit';
 
 export interface BoardsResponse {
     boards: Board[];
@@ -14,14 +16,17 @@ export interface GroupsResponse {
 
 export class BoardsManager {
     boards: Board[];
-    defaultBoard: Board;
+    private _defaultBoard?: Board;
     constructor(private readonly _telemetry: ITelemetry, private readonly _mondaySDK: MondaySDK) {}
 
-    async init(): Promise<Board> {
+    async init(): Promise<Board | null> {
         Logger.appendLine('Init BoardsManager');
         // TODO: load from api all possible boards, check the state to see if the default board is defined.
         this._telemetry.sendTelemetryEvent('boards.manager.init');
-        this.setDefaultBoard(WorkspaceState.fetch('monday', 'defaultBoard') as Board);
+        const boardFromWorkspace = WorkspaceState.fetch('monday', 'defaultBoard') as Board;
+        if (boardFromWorkspace.id) {
+            this.defaultBoard = boardFromWorkspace;
+        }
 
         await this.getEntries();
 
@@ -34,17 +39,25 @@ export class BoardsManager {
         // if we have defaultBoard, check if he exists in the boards list.
         // otherwise prompt the user to select his default board
         // TODO: support multiple boards in a single project/workspace.
-        if (
-            !this.defaultBoard ||
-            !this.defaultBoard.id ||
-            !this.boards.find((board) => board.id === this.defaultBoard.id)
-        ) {
-            await this.selectDefaultBoard();
-        }
-
         this._telemetry.sendTelemetryEvent('boards.manager.success');
 
-        return this.defaultBoard;
+        return this.getDefaultBoard();
+    }
+
+    set defaultBoard(board: Board | undefined) {
+        this._defaultBoard = board;
+        WorkspaceState.store('monday', 'defaultBoard', board);
+    }
+    get defaultBoard(): Board | undefined {
+        return this._defaultBoard;
+    }
+
+    async getDefaultBoard(): Promise<Board | null> {
+        if (this._defaultBoard) {
+            return Promise.resolve(this._defaultBoard);
+        }
+
+        return this.selectDefaultBoard();
     }
 
     public async getEntries(): Promise<void> {
@@ -54,27 +67,21 @@ export class BoardsManager {
         this.boards = boardsResponse.data.boards;
     }
 
-    public async selectDefaultBoard(): Promise<void> {
+    public async selectDefaultBoard(): Promise<Board | null> {
         const choices = this.getBoardsChoices();
-        const response: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(choices, {
+        const response: BoardQuickPickItem | undefined = await vscode.window.showQuickPick(choices, {
             placeHolder: 'Default monday board for this workspace',
         });
         if (response) {
-            this.setDefaultBoard(this.boards.find((board) => `${board.id}` === response.description) as Board);
-        } else {
-            this._telemetry.sendTelemetryEvent('boards.manager.fail');
-            throw new Error('No default board selected');
+            this.defaultBoard = response.data;
+            return Promise.resolve(response.data);
         }
+        return Promise.resolve(null);
     }
 
     public async getBoardGroups(boardId: string): Promise<Group[]> {
         const response = await this._mondaySDK.api<GroupsResponse>(this.allBoardGroups(boardId), '');
         return response.data.boards[0].groups;
-    }
-
-    public setDefaultBoard(board: Board): void {
-        this.defaultBoard = board;
-        WorkspaceState.store('monday', 'defaultBoard', this.defaultBoard);
     }
 
     private allBoardsQuery() {
@@ -115,7 +122,7 @@ export class BoardsManager {
 		}`;
     }
 
-    private getBoardsChoices(): vscode.QuickPickItem[] {
-        return this.boards.map((board) => ({ label: board.name, alwaysShow: true, description: `${board.id}` }));
+    private getBoardsChoices(): BoardQuickPickItem[]  {
+        return this.boards.map((board) => new BoardQuickPickItem(board));
     }
 }

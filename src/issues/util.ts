@@ -6,13 +6,13 @@
 
 import * as marked from 'marked';
 import * as vscode from 'vscode';
-import { User, Team, Item, ItemPreview, State } from 'monday-sdk-js';
+import { User, Team, Item, ItemPreview, State, Board } from 'monday-sdk-js';
 import { join } from 'path';
 
 export const ISSUE_EXPRESSION = /(([^\s]+)\/([^\s]+))?(#)([1-9][0-9]*)($|[\s:;\-(=)])/;
-export const ISSUE_OR_URL_EXPRESSION = /(https?:\/\/monday\.com\/(([^\s]+)\/([^\s]+))\/([^\s]+\/)?(pulses)\/([0-9]+)?)|(([^\s]+)\/([^\s]+))?(#)([1-9][0-9]*)($|[\s:;\-(=)])/;
+export const ISSUE_OR_URL_EXPRESSION = /(https?:\/\/([^\s]+)\.monday\.com\/(([^\s]+)\/([^\s]+))\/([^\s]+\/)?(pulses)\/([0-9]+)?)|(([^\s]+)\/([^\s]+))?(#)([1-9][0-9]*)($|[\s:;\-(=)])/;
 
-export const USER_EXPRESSION = /@([^;]+)/;
+export const USER_EXPRESSION = /@([^;]+)/g;
 
 export const MAX_LINE_LENGTH = 150;
 
@@ -32,9 +32,9 @@ export function parseIssueExpressionOutput(output: RegExpMatchArray | null): Ite
         issue.name = output[3];
         issue.id = output[5];
         return issue;
-    } else if (output.length === 14) {
+    } else if (output.length === 15) {
         issue.name = output[2] || output[10];
-        issue.id = output[5] || output[12];
+        issue.id = output[5] || output[13];
         return issue;
     } else {
         return undefined;
@@ -44,6 +44,21 @@ export function parseIssueExpressionOutput(output: RegExpMatchArray | null): Ite
 export class UserCompletionItem extends vscode.CompletionItem {
     data: User;
 }
+
+export class BoardQuickPickItem implements vscode.QuickPickItem {
+    data: Board;
+    label: string;
+    description: string;
+    detail: string;
+
+    constructor(board: Board) {
+        this.data = board;
+        this.label = board.name;
+        this.description = board.state;
+        this.detail = board.board_kind
+    }
+}
+
 
 export function convertTeamToUser({ id, name, picture_url: photo_thumb_small }: Team): User {
     return {

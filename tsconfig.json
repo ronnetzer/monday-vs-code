@@ -6,7 +6,8 @@
 		"lib": [
 			"dom",
 			"esnext.asynciterable",
-			"es6"
+			"es6",
+			"es2020.string"
 		],
 		"sourceMap": true,
 		"rootDir": "./src",

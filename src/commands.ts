@@ -19,7 +19,7 @@ export function registerCommands(
     usersManager: UsersManager,
 ): void {
     context.subscriptions.push(
-        vscode.commands.registerCommand('auth.signout', async () => {
+        vscode.commands.registerCommand('auth.logout', async () => {
             credentialStore.logout();
         }),
     );
@@ -44,7 +44,7 @@ export function registerCommands(
 
     context.subscriptions.push(
         vscode.commands.registerCommand('boards.setDefault', async (boardItem: BoardTreeItem) => {
-            boardsManager.setDefaultBoard(boardItem.board);
+            boardsManager.defaultBoard = boardItem.board;
         }),
     );
 

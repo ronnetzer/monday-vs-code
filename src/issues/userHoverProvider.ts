@@ -28,7 +28,7 @@ export class UserHoverProvider implements vscode.HoverProvider {
                 wordPosition.end,
             );
             const word = document.getText(wordPosition);
-            const match = word.match(USER_EXPRESSION);
+            const match = [...word.matchAll(USER_EXPRESSION)][0];
             if (match) {
                 return this.createHover(match[1], wordPosition);
             }

@@ -107,6 +107,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Monday
         onceEvent(onSessionDidChanged)((e) =>
             init(context, mondayCredentialStore, boardsManager, usersManager, itemsManager),
         );
+        await mondayCredentialStore.showSignInNotification();
     }
 
     return mondayCredentialStore.getApi();

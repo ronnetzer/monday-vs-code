@@ -134,7 +134,7 @@
       "activitybar": [
         {
           "id": "monday",
-          "title": "monday",
+          "title": "Monday",
           "icon": "resources/icons/monday-icon.png"
         }
       ]
@@ -212,13 +212,13 @@
         "category": "Monday"
       },
       {
-        "command": "auth.signout",
+        "command": "auth.logout",
         "title": "Sign out",
         "category": "Monday"
       },
       {
         "command": "auth.login",
-        "title": "Login",
+        "title": "Sign in",
         "category": "Monday"
       },
       {

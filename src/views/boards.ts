@@ -58,7 +58,7 @@ export class BoardProvider implements vscode.TreeDataProvider<any> {
             // if no element return the boards list
             return Promise.resolve(
                 this.boardsManager.boards.map((board) => {
-                    const isDefault = board.id === this.boardsManager.defaultBoard.id;
+                    const isDefault = board.id === this.boardsManager.defaultBoard?.id;
                     return new BoardTreeItem(board, isDefault ? 2 : 1);
                 }),
             );

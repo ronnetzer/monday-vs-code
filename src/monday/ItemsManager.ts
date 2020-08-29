@@ -1,5 +1,5 @@
 import { ITelemetry } from '../common/telemetry';
-import { MondaySDK, Item, Tag } from 'monday-sdk-js';
+import { MondaySDK, Item, Tag, Board, Group } from 'monday-sdk-js';
 import { BoardsManager } from './boardsManager';
 import Logger from '../common/logger';
 import { UsersManager } from './usersManager';
@@ -53,57 +53,66 @@ export class ItemsManager {
     // }
 
     async updateBody(itemId: string, body: string, boardId?: string) {
-        boardId = boardId ? boardId : this.boardsManager.defaultBoard.id;
-        const query = String.raw`
-        mutation {
-            change_column_value (board_id: ${Number(boardId)}, item_id: ${Number(
-            itemId,
-        )}, column_id: "long_text", value: "{\"text\": \"${body}\"}") {
-                id
-            }
-        }`;
-
-        return await this.sdk.api(query, '').then((res) => {
-            return res;
-        });
-    }
-
-    async updateSubscribers(itemId: string, subscribers: string[], boardId?: string) {
-        boardId = boardId ? boardId : this.boardsManager.defaultBoard.id;
-        const promises: Promise<any>[] = [];
-
-        subscribers.forEach((subscriber) => {
-            const user = this.usersManager.findUserByName(subscriber);
-            const kind = user?.isTeam ? 'team' : 'person';
+        const defaultBoard = await this.boardsManager.getDefaultBoard();
+        if (defaultBoard) {
+            boardId = boardId ? boardId : defaultBoard.id;
             const query = String.raw`
             mutation {
                 change_column_value (board_id: ${Number(boardId)}, item_id: ${Number(
                 itemId,
-            )}, column_id: "person", value: "{\"added_person_or_team\": {\"id\": ${
-                user?.id
-            }, \"kind\": \"${kind}\"}}") {
+            )}, column_id: "long_text", value: "{\"text\": \"${body}\"}") {
                     id
                 }
             }`;
 
-            const promise = this.sdk.api(query, '').then((res) => {
+            return await this.sdk.api(query, '').then((res) => {
                 return res;
             });
-
-            promises.push(promise);
-        });
-
-        return await Promise.all(promises).then((res) => {
-            return res;
-        });
+        }
     }
 
-    async createItem(title: string, boardId?: string, groupId?: string): Promise<Item & { board: { id: string } }> {
-        boardId = boardId ? boardId : this.boardsManager.defaultBoard.id;
-        groupId = groupId ? groupId : this.boardsManager.defaultBoard.groups[0]?.id;
-        return await this.sdk.api<CreateItemResponse>(this.createItemQuery(title, boardId, groupId), '').then((res) => {
+    async updateSubscribers(itemId: string, subscribers: string[], boardId?: string) {
+        const defaultBoard = await this.boardsManager.getDefaultBoard();
+        if (defaultBoard) {
+            boardId = boardId ? boardId : defaultBoard.id;
+            const promises: Promise<any>[] = [];
+
+            subscribers.forEach((subscriber) => {
+                const user = this.usersManager.findUserByName(subscriber);
+                const kind = user?.isTeam ? 'team' : 'person';
+                const query = String.raw`
+                mutation {
+                    change_column_value (board_id: ${Number(boardId)}, item_id: ${Number(
+                    itemId,
+                )}, column_id: "person", value: "{\"added_person_or_team\": {\"id\": ${
+                    user?.id
+                }, \"kind\": \"${kind}\"}}") {
+                        id
+                    }
+                }`;
+
+                const promise = this.sdk.api(query, '').then((res) => {
+                    return res;
+                });
+
+                promises.push(promise);
+            });
+
+            return await Promise.all(promises).then((res) => {
+                return res;
+            });
+        }
+    }
+
+    async createItem(title: string, board?: string, group?: string): Promise<Item | void> {
+        const defaultBoard = await this.boardsManager.getDefaultBoard();
+        if (defaultBoard) {
+            const boardId = board ? board : defaultBoard.id;
+            const groupId = group ? group : defaultBoard.groups[0]?.id;
+            return await this.sdk.api<CreateItemResponse>(this.createItemQuery(title, boardId, groupId), '').then((res) => {
             return res.data.create_item;
         });
+        }
     }
 
     private boardTagsQuery(ids: string[]): string {

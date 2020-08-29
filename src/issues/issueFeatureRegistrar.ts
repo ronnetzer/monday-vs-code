@@ -37,11 +37,11 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
     private _stateManager: StateManager;
     private createIssueInfo:
         | {
-              document: vscode.TextDocument;
-              newIssue: NewIssue | undefined;
-              lineNumber: number | undefined;
-              insertIndex: number | undefined;
-          }
+            document: vscode.TextDocument;
+            newIssue: NewIssue | undefined;
+            lineNumber: number | undefined;
+            insertIndex: number | undefined;
+        }
         | undefined;
 
     constructor(
@@ -388,19 +388,19 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
             disposable: vscode.Disposable | undefined;
             configuration: string;
         }[] = [
-            {
-                provider: IssueCompletionProvider,
-                trigger: '#',
-                disposable: undefined,
-                configuration: ISSUE_COMPLETIONS_CONFIGURATION,
-            },
-            {
-                provider: UserCompletionProvider,
-                trigger: '@',
-                disposable: undefined,
-                configuration: USER_COMPLETIONS_CONFIGURATION,
-            },
-        ];
+                {
+                    provider: IssueCompletionProvider,
+                    trigger: '#',
+                    disposable: undefined,
+                    configuration: ISSUE_COMPLETIONS_CONFIGURATION,
+                },
+                {
+                    provider: UserCompletionProvider,
+                    trigger: '@',
+                    disposable: undefined,
+                    configuration: USER_COMPLETIONS_CONFIGURATION,
+                },
+            ];
         for (const element of providers) {
             if (vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get(element.configuration, true)) {
                 this.context.subscriptions.push(
@@ -504,7 +504,7 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
             }
         }
 
-        let boardId = this.boardsManager.defaultBoard.id;
+        let boardId = (await this.boardsManager.getDefaultBoard())?.id;
         if (text.startsWith(BOARD)) {
             const lines = text.split(/\r\n|\n/, 1);
             if (lines.length === 1) {
@@ -638,17 +638,20 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
             document = newIssue.document;
             insertIndex = newIssue.insertIndex;
             lineNumber = newIssue.lineNumber;
-            titlePlaceholder = newIssue.line.substring(insertIndex, newIssue.line.length).trim();
+            titlePlaceholder = newIssue.line.substring(insertIndex, newIssue.line.length).replace(USER_EXPRESSION, '').replace(/;/g, '').trim();
             issueGenerationText = document.getText(
                 newIssue.range.isEmpty ? document.lineAt(newIssue.range.start.line).range : newIssue.range,
             );
         } else {
             return undefined;
         }
-        const matches = issueGenerationText.match(USER_EXPRESSION);
-        if (matches && matches.length === 2 && (await this._stateManager.userMap).has(matches[1])) {
-            subscribers = [matches[1]];
-        }
+
+        await [...issueGenerationText.matchAll(USER_EXPRESSION)].forEach(async matches => {
+            if (matches && matches.length === 2 && (await this._stateManager.userMap).has(matches[1])) {
+                subscribers.push(matches[1]);
+            }
+        });
+
 
         let tags: string[] | undefined;
         if (issueGenerationText.startsWith(TAGS)) {
@@ -725,29 +728,28 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
         // create issue
         const issue = await this.itemsManager.createItem(title, boardId, groupId);
 
-        if (body) {
-            await this.itemsManager.updateBody(issue.id, body, boardId);
-        }
-
-        if (subscribers) {
-            await this.itemsManager.updateSubscribers(issue.id, subscribers, boardId);
-        }
-
-        // if (tags) {
-        //     await this.itemsManager.updateTags(issue.id, tags, boardId);
-        // }
-
-        const html_url = createItemUrl(issue, this.usersManager.currentUser);
-
         if (issue) {
+            if (body) {
+                await this.itemsManager.updateBody(issue.id, body, boardId);
+            }
+
+            if (subscribers) {
+                await this.itemsManager.updateSubscribers(issue.id, subscribers, boardId);
+            }
+
+            // if (tags) {
+            //     await this.itemsManager.updateTags(issue.id, tags, boardId);
+            // }
+
+            const html_url = createItemUrl(issue, this.usersManager.currentUser);
             if (document !== undefined && insertIndex !== undefined && lineNumber !== undefined) {
                 const edit: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
                 const issueReference: string =
                     vscode.workspace.getConfiguration(ISSUES_CONFIGURATION).get('createInsertFormat', 'number') ===
-                    'number'
+                        'number'
                         ? `#${issue.id}`
                         : html_url;
-                edit.insert(document.uri, new vscode.Position(lineNumber, insertIndex), ` ${title}, ${issueReference}`);
+                edit.replace(document.uri, new vscode.Range(new vscode.Position(lineNumber, insertIndex), document.lineAt(lineNumber).range.end), ` ${issueReference} ${title} ${subscribers?.map(s => `@${s};`)?.join('')}`);
                 await vscode.workspace.applyEdit(edit);
             } else {
                 const copyIssueUrl = 'Copy URL';
@@ -787,18 +789,19 @@ export class IssueFeatureRegistrar implements vscode.Disposable {
         }
         await vscode.workspace.fs.delete(bodyPath);
         const subscribersLine = `${SUBSCRIBERS} ${
-            subscribers && subscribers.length > 0 ? subscribers.map((value) => '@' + value).join(', ') + ' ' : ''
-        }`;
+            subscribers && subscribers.length > 0 ? subscribers.map((value) => `@${value};`).join('') + ' ' : ''
+            }`;
         const labelLine = `${TAGS} `;
-        const boardLine = `${BOARD} ${boardId ?? this.boardsManager.defaultBoard.id}`;
+        const boardLine = `${BOARD} ${boardId ?? (await this.boardsManager.getDefaultBoard())?.id}`;
         const groupLine = `${GROUP} ${groupId ?? ''}`;
-        const text = `${title ?? 'Issue Title'}\n
+        // TODO: parse the title and remove subscribers and tags from it
+        const text = `${title ?? 'Item Title'}\n
 ${subscribersLine}\n
 ${labelLine}\n
 ${boardLine}\n
 ${groupLine}\n
 ${body ?? ''}\n
-<!-- Edit the body of your new issue then save the file. The first line will be the issue title. Assignees and Tags follow after a blank line. Leave an empty line before beginning the body of the item. -->`;
+Item description`;
         await vscode.workspace.fs.writeFile(bodyPath, this.stringToUint8Array(text));
         const boardDecoration = vscode.window.createTextEditorDecorationType({
             after: {

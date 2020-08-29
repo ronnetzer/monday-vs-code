@@ -63,14 +63,16 @@ export class CredentialStore {
     }
 
     public async logout(): Promise<void> {
-        this._telemetry.sendTelemetryEvent('auth.logout');
+        this._telemetry.sendTelemetryEvent('auth.signout');
         this._mondayAPI?.setSession();
+        vscode.window.showInformationMessage('Monday VS Code Extension - Logged out successfully');
     }
 
     public async login(): Promise<MondayKit> {
         /* __GDPR__
             "auth.start" : {}
         */
+        const projectUri = vscode.workspace.workspaceFolders?.[0].uri.fsPath
         this._telemetry.sendTelemetryEvent('auth.start');
 
         let retry = true;
@@ -98,11 +100,13 @@ export class CredentialStore {
                 "auth.success" : {}
             */
             this._telemetry.sendTelemetryEvent('auth.success');
+            vscode.window.showInformationMessage('Monday VS Code Extension - Logged in successfully');
         } else {
             /* __GDPR__
                 "auth.fail" : {}
             */
             this._telemetry.sendTelemetryEvent('auth.fail');
+            vscode.window.showInformationMessage('Monday VS Code Extension - Login failed!');
         }
 
         return this._mondayAPI;

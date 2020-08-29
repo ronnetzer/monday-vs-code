@@ -6,6 +6,7 @@ import { UsersManager } from '../monday/usersManager';
 import { ITelemetry } from '../common/telemetry';
 import { User, Item } from 'monday-sdk-js';
 import { ItemsManager } from '../monday/ItemsManager';
+import { onSessionDidChanged } from '../monday/kit';
 
 const ISSUES_KEY = 'issues';
 
@@ -66,6 +67,15 @@ export class StateManager {
             this.onRefreshCacheNeeded(async () => {
                 await this.refresh();
             }),
+        );
+
+        this.context.subscriptions.push(
+            onSessionDidChanged(async (sesssion) => {
+                if (!sesssion) {
+                    this.refreshCacheNeeded();
+                    this.boardsManager.defaultBoard = undefined;
+                }
+            })
         );
     }
 
