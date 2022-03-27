@@ -331,7 +331,7 @@
     "jsdom": "16.2.0",
     "jsdom-global": "3.0.2",
     "lint-staged": "^10.2.11",
-    "minimist": "^1.2.3",
+    "minimist": "^1.2.6",
     "mkdirp": "0.5.1",
     "mocha": "^7.0.1",
     "mocha-junit-reporter": "1.23.0",
