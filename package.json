@@ -366,7 +366,7 @@
     "js-base64": "^2.5.2",
     "lru-cache": "^5.1.1",
     "marked": "^0.8.0",
-    "moment": "^2.22.1",
+    "moment": "^2.29.4",
     "monday-sdk-js": "0.1.0",
     "node-emoji": "^1.8.1",
     "node-fetch": "3.0.0-beta.7",
